@@ -135,14 +135,12 @@
     }
 
     function sendArrowDown() {
-        if (document.activeElement && document.activeElement !== document.body) {
-            document.activeElement.blur();
+        const nextBtn = document.querySelector('button[data-e2e="arrow-right"]');
+        if (nextBtn) {
+            nextBtn.click();
+        } else {
+            log('Next video button missing from DOM. Scroll failed.', 'error');
         }
-        document.body.focus();
-
-        const eventInit = { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true, cancelable: true, composed: true };
-        document.body.dispatchEvent(new KeyboardEvent('keydown', eventInit));
-        document.body.dispatchEvent(new KeyboardEvent('keyup', eventInit));
     }
 
     async function ensureScroll() {
