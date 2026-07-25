@@ -6,6 +6,7 @@
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
+// @license      GPL-3.0-or-later
 // ==/UserScript==
 
 (function () {
