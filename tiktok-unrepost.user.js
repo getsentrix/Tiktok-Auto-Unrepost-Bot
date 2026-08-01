@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.2
-// @description  TikTok unrepost script that actually works.
+// @version      11.3
+// @description  TikTok unrepost script that actually works. +Performance Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
 // @license      GPL-3.0-or-later
+// @downloadURL  https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @updateURL    https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
 // ==/UserScript==
 
 (function () {
@@ -16,7 +18,7 @@
     const delay = ms => new Promise(res => setTimeout(res, ms));
     const randomDelay = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    // --- AGGRESSIVE RATE LIMITS ---
+    // --- RATE LIMITS ---
     let currentBatchLimit = randomDelay(15, 25);
     const SCROLL_TIMEOUT = 4000;
 
@@ -30,20 +32,20 @@
     let stuckCount = 0;
     const STUCK_LIMIT = 3;
 
-    // --- INJECT CUSTOM STYLES ---
+    // --- INJECT STYLES ---
     function injectStyles() {
         if (document.getElementById('tur-styles')) return;
         const style = document.createElement('style');
         style.id = 'tur-styles';
+        // Removed backdrop-filter to eliminate GPU compositing overhead. Replaced with solid background.
         style.textContent = `
             #tur-panel {
                 position: fixed; top: 20px; right: 20px; z-index: 999999;
-                background: rgba(18, 18, 18, 0.95); border: 1px solid #2a2a2a;
+                background: rgba(22, 22, 22, 0.98); border: 1px solid #2a2a2a;
                 border-radius: 10px; padding: 14px; color: #eaeaea;
                 font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 font-size: 13px; display: flex; flex-direction: column; gap: 10px; width: 270px;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.6); backdrop-filter: blur(10px);
-                box-sizing: border-box; overflow: hidden; user-select: none;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.8); box-sizing: border-box; overflow: hidden; user-select: none;
             }
             .tur-header {
                 display: flex; justify-content: space-between; align-items: center;
@@ -89,11 +91,9 @@
 
         logBox.appendChild(entry);
 
-        // Keep DOM lightweight (max 50 log items)
         while (logBox.children.length > 50) {
             logBox.removeChild(logBox.firstChild);
         }
-
         logBox.scrollTop = logBox.scrollHeight;
     }
 
@@ -106,7 +106,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.2 (Stable)</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.3</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -136,20 +136,19 @@
                     <span style="font-weight: 500; font-size: 14px; color: #fff;">How To Use</span>
                     <span id="tur-close-tut" style="cursor: pointer; color: #ff5c5c; font-weight: bold; font-size: 14px;">✕</span>
                 </div>
-                <div style="font-size: 12px; line-height: 1.6; color: #bbb;">
+                <div style="font-size: 11px; line-height: 1.5; color: #bbb;">
                     <b>1.</b> Navigate to your profile page.<br><br>
                     <b>2.</b> Click <b>Unhide Reposts Tab</b> if the tab is hidden by TikTok.<br><br>
                     <b>3.</b> Wait for videos to load. Open the <b>FIRST</b> video in the grid so it occupies the screen.<br><br>
                     <b>4.</b> If you only see a blank black page, go to your For You page and manually repost a video to refresh TikTok's cache.<br><br>
                     <b>5.</b> Click <b>Start Auto-Unrepost</b>.<br><br>
-                    <span style="color: #f5a623;"><b>WARNING:</b> Avoid touching your keyboard or interacting with TikTok while running. The script relies on precise delays to bypass rate limits.</span>
+                    <span style="color: #f5a623;"><b>WARNING:</b> Keep this tab focused and avoid touching your keyboard or interacting with TikTok while running. Using this script poses a shadowban risk.</span>
                 </div>
             </div>
         `;
 
         document.body.appendChild(panel);
 
-        // Bind Events
         document.getElementById('tur-unhide-btn').addEventListener('click', unhideRepostsOnly);
         document.getElementById('tur-toggle-btn').addEventListener('click', toggleScript);
         document.getElementById('tur-open-tut').addEventListener('click', () => {
@@ -159,7 +158,6 @@
             document.getElementById('tur-tutorial-overlay').style.display = 'none';
         });
 
-        // Minimize Toggle
         const bodyEl = document.getElementById('tur-body');
         document.getElementById('tur-min-btn').addEventListener('click', (e) => {
             const isHidden = bodyEl.style.display === 'none';
@@ -167,39 +165,40 @@
             e.target.textContent = isHidden ? '—' : '┼';
         });
 
-        // Make Panel Draggable
         makeDraggable(panel, document.getElementById('tur-drag-handle'));
-
         log('Discord: @dprits2. Ready.');
     }
 
+    // Completely rewritten to utilize AbortController and EventTarget.addEventListener to prevent persistent closures and memory leaks.
     function makeDraggable(element, handle) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        handle.onmousedown = dragMouseDown;
+        let activeDragController = null;
 
-        function dragMouseDown(e) {
+        handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             pos3 = e.clientX;
             pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
 
-        function elementDrag(e) {
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-            element.style.right = 'auto'; // Disable right lock
-        }
+            activeDragController = new AbortController();
 
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
+            document.addEventListener('mousemove', (e) => {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                element.style.top = (element.offsetTop - pos2) + "px";
+                element.style.left = (element.offsetLeft - pos1) + "px";
+                element.style.right = 'auto';
+            }, { signal: activeDragController.signal });
+
+            document.addEventListener('mouseup', () => {
+                if (activeDragController) {
+                    activeDragController.abort();
+                    activeDragController = null;
+                }
+            }, { signal: activeDragController.signal });
+        });
     }
 
     function unhideRepostsOnly() {
@@ -222,7 +221,7 @@
             nextBtn.click();
         } else {
             log('Next video button missing from DOM. Scroll failed.', 'error');
-            isRunning = false; // Kill the loop if navigation is broken to prevent endless hangs
+            isRunning = false;
         }
     }
 
@@ -270,7 +269,6 @@
         isProcessingLoop = true;
 
         while (isRunning) {
-            // --- ROGUE DETECTION LOGIC ---
             const currentUrl = window.location.href;
             if (currentUrl === lastUrl) {
                 stuckCount++;
@@ -284,7 +282,6 @@
                 lastUrl = currentUrl;
             }
 
-            // --- ANTI-RATE LIMIT BATCH CHECK ---
             if (batchCount >= currentBatchLimit) {
                 const breakTimeSeconds = randomDelay(10, 15);
                 log(`Rate-limit prevention: Sleeping ${breakTimeSeconds}s...`, 'warn');
@@ -296,21 +293,23 @@
                 }
 
                 batchCount = 0;
-                currentBatchLimit = randomDelay(15, 25); // Bug fixed here
+                currentBatchLimit = randomDelay(15, 25);
             }
 
             if (!isRunning) break;
 
-            // DOM UI Render Delay
             await delay(randomDelay(2000, 3000));
 
-            // STRICT Selectors for Unrepost Button
             const repostBtn = document.querySelector('a[data-e2e="video-share-repost"]');
 
             if (repostBtn) {
                 const ariaLabel = (repostBtn.getAttribute('aria-label') || '').toLowerCase();
 
-                if (ariaLabel === 'remove repost') {
+                // i18n Localization Targets Added
+                const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+                const isReposted = validLabels.some(label => ariaLabel.includes(label));
+
+                if (isReposted) {
                     repostBtn.click();
                     count++;
                     batchCount++;
@@ -335,7 +334,6 @@
 
         isProcessingLoop = false;
 
-        // Failsafe to reset UI state if the loop breaks internally
         const btn = document.getElementById('tur-toggle-btn');
         if (btn && !isRunning) {
             btn.innerText = 'Start Auto-Unrepost';
@@ -343,11 +341,22 @@
         }
     }
 
-    // Lightweight UI Injection Check
-    setInterval(() => {
-        if (!document.getElementById('tur-panel') && document.body) {
-            createUI();
+    // Replaced CPU-hogging setInterval with a lightweight MutationObserver on the microtask queue.
+    function initObserver() {
+        const uiObserver = new MutationObserver(() => {
+            if (!document.getElementById('tur-panel') && document.body) {
+                createUI();
+            }
+        });
+        if (document.body) {
+            uiObserver.observe(document.body, { childList: true, subtree: true });
+        } else {
+            window.addEventListener('DOMContentLoaded', () => {
+                uiObserver.observe(document.body, { childList: true, subtree: true });
+            });
         }
-    }, 2000);
+    }
+
+    initObserver();
 
 })();
