@@ -37,7 +37,7 @@
         if (document.getElementById('tur-styles')) return;
         const style = document.createElement('style');
         style.id = 'tur-styles';
-        // Removed backdrop-filter to eliminate GPU compositing overhead. Replaced with solid background.
+        // backdrop-filter replaced with solid background to increase performance
         style.textContent = `
             @keyframes turFadeIn {
                 from { opacity: 0; transform: translateY(-15px) scale(0.98); }
@@ -151,7 +151,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.3</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.4</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -214,7 +214,7 @@
         log('Discord: @dprits2. Ready.');
     }
 
-    // Completely rewritten to utilize AbortController and EventTarget.addEventListener to prevent persistent closures and memory leaks.
+    // re-written to utilize AbortController and EventTarget.addEventListener to prevent persistent closures and memory leaks
     function makeDraggable(element, handle) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         let activeDragController = null;
@@ -298,7 +298,7 @@
             stuckCount = 0;
             btn.innerText = 'Stop Auto-Unrepost';
             btn.classList.add('tur-btn-active');
-            log('Bot execution started.');
+            log('Bot started.');
 
             if (!isProcessingLoop) {
                 processLoop();
@@ -306,7 +306,7 @@
         } else {
             btn.innerText = 'Start Auto-Unrepost';
             btn.classList.remove('tur-btn-active');
-            log('Bot stopped by user.', 'warn');
+            log('Bot stopped.', 'warn');
         }
     }
 
@@ -318,7 +318,7 @@
             if (currentUrl === lastUrl) {
                 stuckCount++;
                 if (stuckCount >= STUCK_LIMIT) {
-                    log('Stuck on same video. Halting bot.', 'error');
+                    log('Stuck on same video. Stopping bot.', 'error');
                     toggleScript();
                     break;
                 }
@@ -386,7 +386,7 @@
         }
     }
 
-    // Replaced CPU-hogging setInterval with a lightweight MutationObserver on the microtask queue.
+    // replaced setInterval with MutationObserver for better performance
     function initObserver() {
         const uiObserver = new MutationObserver(() => {
             if (!document.getElementById('tur-panel') && document.body) {
