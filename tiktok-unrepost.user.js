@@ -187,7 +187,7 @@
                     <b>3.</b> Wait for videos to load. Open the <b>FIRST</b> video in the grid so it occupies the screen.<br><br>
                     <b>4.</b> If you only see a blank black page, go to your For You page and manually repost a video to refresh TikTok's cache.<br><br>
                     <b>5.</b> Click <b>Start Auto-Unrepost</b>.<br><br>
-                    <span style="color: #f5a623;"><b>WARNING:</b> Keep this tab focused and avoid touching your keyboard or interacting with TikTok while running. Using this script poses a shadowban risk.</span>
+                    <span style="color: #f5a623;"><b>WARNING:</b> Using this script poses a shadowban risk. Keep this tab focused and avoid touching your keyboard or interacting with TikTok while running. PLEASE report any issues to my Discord: @dprits2</span>
                 </div>
             </div>
         `;
