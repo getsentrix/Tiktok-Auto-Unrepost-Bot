@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.3
-// @description  TikTok unrepost script that actually works. +Performance Improvements
+// @version      11.4
+// @description  TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
 // @license      GPL-3.0-or-later
-// @downloadURL  https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
-// @updateURL    https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
+// @downloadURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @updateURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
 // ==/UserScript==
 
 (function () {
@@ -39,6 +39,23 @@
         style.id = 'tur-styles';
         // Removed backdrop-filter to eliminate GPU compositing overhead. Replaced with solid background.
         style.textContent = `
+            @keyframes turFadeIn {
+                from { opacity: 0; transform: translateY(-15px) scale(0.98); }
+                to { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes turPulse {
+                0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+                70% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+            }
+            @keyframes turLogEntry {
+                from { opacity: 0; transform: translateX(-8px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            @keyframes turOverlayEntry {
+                from { opacity: 0; transform: scale(0.95); }
+                to { opacity: 1; transform: scale(1); }
+            }
             #tur-panel {
                 position: fixed; top: 20px; right: 20px; z-index: 999999;
                 background: rgba(22, 22, 22, 0.98); border: 1px solid #2a2a2a;
@@ -46,6 +63,7 @@
                 font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 font-size: 13px; display: flex; flex-direction: column; gap: 10px; width: 270px;
                 box-shadow: 0 8px 24px rgba(0,0,0,0.8); box-sizing: border-box; overflow: hidden; user-select: none;
+                animation: turFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
             .tur-header {
                 display: flex; justify-content: space-between; align-items: center;
@@ -54,27 +72,54 @@
             .tur-btn {
                 background: #222; color: #eaeaea; border: 1px solid #333;
                 padding: 8px; border-radius: 6px; cursor: pointer; font-family: inherit;
-                font-size: 12px; font-weight: 500; width: 100%; transition: 0.2s;
+                font-size: 12px; font-weight: 500; width: 100%;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             }
-            .tur-btn:hover { background: #2f2f2f; }
+            .tur-btn:hover {
+                background: #2f2f2f;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            }
+            .tur-btn:active {
+                transform: translateY(1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            }
             .tur-btn-primary {
                 background: #fff; color: #000; border: none; font-weight: 600; font-size: 13px;
             }
-            .tur-btn-primary:hover { background: #e5e5e5; }
+            .tur-btn-primary:hover {
+                background: #e5e5e5;
+            }
             .tur-btn-active {
                 background: #ff4757 !important; color: #fff !important;
+                animation: turPulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
             }
             .tur-badge {
                 cursor: pointer; color: #888; font-weight: 600; font-size: 11px;
                 background: #222; padding: 3px 6px; border-radius: 4px;
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             }
-            .tur-badge:hover { color: #fff; background: #333; }
+            .tur-badge:hover {
+                color: #fff;
+                background: #333;
+                transform: scale(1.05);
+            }
+            .tur-badge:active {
+                transform: scale(0.95);
+            }
             #tur-log-box {
                 height: 110px; background: #0a0a0a; border: 1px solid #222;
                 border-radius: 6px; padding: 8px; overflow-y: auto;
                 font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
                 font-size: 11px; display: flex; flex-direction: column; gap: 4px;
                 user-select: text;
+                scroll-behavior: smooth;
+            }
+            #tur-log-box div {
+                animation: turLogEntry 0.3s ease-out forwards;
+            }
+            #tur-tutorial-overlay[style*="display: flex"] {
+                animation: turOverlayEntry 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             }
         `;
         document.head.appendChild(style);
