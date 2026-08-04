@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         TikTok Unrepost Bot Stable
+// @name         TikTok Unrepost Bot FREE
 // @namespace    http://tampermonkey.net/
 // @version      11.4
-// @description  TikTok unrepost script that actually works. +Performance/UI Improvements
+// @description  Completely free TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
