@@ -1,14 +1,14 @@
 // ==UserScript==
-// @name         TikTok Unrepost Bot FREE
+// @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.4
-// @description  Completely free TikTok unrepost script that actually works. +Performance/UI Improvements
+// @version      11.5
+// @description  TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
 // @license      GPL-3.0-or-later
-// @downloadURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
-// @updateURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
+// @downloadURL  https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @updateURL    https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
 // ==/UserScript==
 
 (function () {
@@ -151,7 +151,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.4</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.5</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -261,7 +261,10 @@
     }
 
     function sendArrowDown() {
-        const nextBtn = document.querySelector('button[data-e2e="arrow-right"]');
+        // --- DUAL TARGETING: Supports both Old UI and New UI for the Next button ---
+        const nextBtn = document.querySelector('button[data-e2e="arrow-right"]') ||
+                        document.querySelector('button[aria-label="Next video" i]');
+
         if (nextBtn) {
             nextBtn.click();
         } else {
@@ -345,17 +348,30 @@
 
             await delay(randomDelay(2000, 3000));
 
-            const repostBtn = document.querySelector('a[data-e2e="video-share-repost"]');
+            // --- DUAL TARGETING: Supports both Old UI and New UI for Repost button ---
+            const oldRepostBtn = document.querySelector('a[data-e2e="video-share-repost"]');
+            const newRepostBadge = document.querySelector('div[data-e2e="repost-action-tag"]');
 
-            if (repostBtn) {
-                const ariaLabel = (repostBtn.getAttribute('aria-label') || '').toLowerCase();
+            if (newRepostBadge || oldRepostBtn) {
+                let targetBtn = null;
+                let isReposted = false;
 
-                // i18n Localization Targets Added
-                const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
-                const isReposted = validLabels.some(label => ariaLabel.includes(label));
+                if (newRepostBadge) {
+                    // NEW UI: The floating tag only exists if the video is already reposted.
+                    targetBtn = newRepostBadge;
+                    isReposted = true;
+                } else if (oldRepostBtn) {
+                    // OLD UI: The share button always exists, so we must verify the aria-label.
+                    const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
+                    const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+                    if (validLabels.some(label => ariaLabel.includes(label))) {
+                        targetBtn = oldRepostBtn;
+                        isReposted = true;
+                    }
+                }
 
-                if (isReposted) {
-                    repostBtn.click();
+                if (isReposted && targetBtn) {
+                    targetBtn.click();
                     count++;
                     batchCount++;
 
