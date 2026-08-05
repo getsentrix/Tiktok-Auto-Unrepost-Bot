@@ -275,7 +275,7 @@
     }
 
     function sendArrowDown() {
-        // --- DUAL TARGETING: Supports both Old UI and New UI for the Next button ---
+        // --- support for both old ui and new ui ---
         const nextBtn = getActiveElement('button[data-e2e="arrow-right"]') ||
                         getActiveElement('button[aria-label="Next video" i]');
 
@@ -362,7 +362,7 @@
 
             await delay(randomDelay(2000, 3000));
 
-            // --- DUAL TARGETING: Supports both Old UI and New UI for Repost button ---
+            // --- support for both old ui and new ui ---
             const oldRepostBtn = getActiveElement('a[data-e2e="video-share-repost"]');
 
             if (oldRepostBtn) {
