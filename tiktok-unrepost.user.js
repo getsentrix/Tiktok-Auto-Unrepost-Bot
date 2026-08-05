@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.5
-// @description  TikTok unrepost script that actually works. +Performance/UI Improvements
+// @version      11.6
+// @description  Completely Free TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
 // @license      GPL-3.0-or-later
-// @downloadURL  https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
-// @updateURL    https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
+// @downloadURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @updateURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
 // ==/UserScript==
 
 (function () {
@@ -17,6 +17,20 @@
     // --- HELPER FUNCTIONS ---
     const delay = ms => new Promise(res => setTimeout(res, ms));
     const randomDelay = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    function getActiveElement(selector) {
+        const elements = document.querySelectorAll(selector);
+        for (let el of elements) {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) {
+                const centerY = rect.top + (rect.height / 2);
+                if (centerY >= 0 && centerY <= window.innerHeight) {
+                    return el;
+                }
+            }
+        }
+        return null;
+    }
 
     // --- RATE LIMITS ---
     let currentBatchLimit = randomDelay(15, 25);
@@ -151,7 +165,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.5</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.6</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -262,8 +276,8 @@
 
     function sendArrowDown() {
         // --- DUAL TARGETING: Supports both Old UI and New UI for the Next button ---
-        const nextBtn = document.querySelector('button[data-e2e="arrow-right"]') ||
-                        document.querySelector('button[aria-label="Next video" i]');
+        const nextBtn = getActiveElement('button[data-e2e="arrow-right"]') ||
+                        getActiveElement('button[aria-label="Next video" i]');
 
         if (nextBtn) {
             nextBtn.click();
@@ -349,42 +363,67 @@
             await delay(randomDelay(2000, 3000));
 
             // --- DUAL TARGETING: Supports both Old UI and New UI for Repost button ---
-            const oldRepostBtn = document.querySelector('a[data-e2e="video-share-repost"]');
-            const newRepostBadge = document.querySelector('div[data-e2e="repost-action-tag"]');
+            const oldRepostBtn = getActiveElement('a[data-e2e="video-share-repost"]');
 
-            if (newRepostBadge || oldRepostBtn) {
-                let targetBtn = null;
-                let isReposted = false;
+            if (oldRepostBtn) {
+                const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
+                const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
 
-                if (newRepostBadge) {
-                    // NEW UI: The floating tag only exists if the video is already reposted.
-                    targetBtn = newRepostBadge;
-                    isReposted = true;
-                } else if (oldRepostBtn) {
-                    // OLD UI: The share button always exists, so we must verify the aria-label.
-                    const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
-                    const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
-                    if (validLabels.some(label => ariaLabel.includes(label))) {
-                        targetBtn = oldRepostBtn;
-                        isReposted = true;
-                    }
-                }
-
-                if (isReposted && targetBtn) {
-                    targetBtn.click();
+                if (validLabels.some(label => ariaLabel.includes(label))) {
+                    oldRepostBtn.click();
                     count++;
                     batchCount++;
-
                     localStorage.setItem('tur_processed_count', count.toString());
                     document.getElementById('tur-count').innerText = count;
-
                     log(`Unreposted video #${count}`);
                     await delay(randomDelay(1500, 2500));
                 } else {
                     log('Video not reposted. Skipping.');
                 }
             } else {
-                log('Repost button missing from DOM.', 'warn');
+                const shareIcon = getActiveElement('div[data-e2e="share-icon"]') || getActiveElement('button[data-e2e="share-icon"]');
+
+                if (shareIcon) {
+                    shareIcon.click();
+                    await delay(randomDelay(400, 600));
+
+                    const shareMenuRepostBtn = document.querySelector('[data-e2e="share-repost"]');
+
+                    if (shareMenuRepostBtn) {
+                        const btnText = (shareMenuRepostBtn.textContent || '').toLowerCase();
+                        const validRemoveLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+
+                        if (validRemoveLabels.some(label => btnText.includes(label))) {
+                            shareMenuRepostBtn.click();
+                            count++;
+                            batchCount++;
+                            localStorage.setItem('tur_processed_count', count.toString());
+                            document.getElementById('tur-count').innerText = count;
+                            log(`Unreposted video #${count}`);
+                            await delay(randomDelay(1500, 2500));
+                        } else {
+                            log('Video not reposted. Skipping.');
+                            const closeBtn = document.querySelector('button[aria-label="close"]');
+                            if (closeBtn) {
+                                closeBtn.click();
+                            } else {
+                                shareIcon.click();
+                            }
+                            await delay(randomDelay(300, 500));
+                        }
+                    } else {
+                        log('Repost button missing from DOM.', 'warn');
+                        const closeBtn = document.querySelector('button[aria-label="close"]');
+                        if (closeBtn) {
+                            closeBtn.click();
+                        } else {
+                            shareIcon.click();
+                        }
+                        await delay(randomDelay(300, 500));
+                    }
+                } else {
+                    log('Share icon missing from DOM.', 'warn');
+                }
             }
 
             if (!isRunning) break;
