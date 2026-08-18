@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.6
-// @description  Completely Free TikTok unrepost script that actually works. +Performance/UI Improvements
+// @version      11.7
+// @description  TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
 // @grant        none
 // @license      GPL-3.0-or-later
-// @downloadURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
-// @updateURL https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @downloadURL  https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js
+// @updateURL    https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.meta.js
 // ==/UserScript==
 
 (function () {
@@ -20,16 +20,22 @@
 
     function getActiveElement(selector) {
         const elements = document.querySelectorAll(selector);
-        for (let el of elements) {
+        const screenCenter = window.innerHeight / 2;
+        let closestEl = null;
+        let minDistance = Infinity;
+
+        for (const el of elements) {
             const rect = el.getBoundingClientRect();
-            if (rect.height > 0) {
+            if (rect.height > 0 && rect.width > 0) {
                 const centerY = rect.top + (rect.height / 2);
-                if (centerY >= 0 && centerY <= window.innerHeight) {
-                    return el;
+                const dist = Math.abs(centerY - screenCenter);
+                if (dist < minDistance && rect.bottom > 0 && rect.top < window.innerHeight) {
+                    minDistance = dist;
+                    closestEl = el;
                 }
             }
         }
-        return null;
+        return closestEl;
     }
 
     // --- RATE LIMITS ---
@@ -51,7 +57,7 @@
         if (document.getElementById('tur-styles')) return;
         const style = document.createElement('style');
         style.id = 'tur-styles';
-        // backdrop-filter replaced with solid background to increase performance
+    // backdrop filter replaced with solid background to increase performance
         style.textContent = `
             @keyframes turFadeIn {
                 from { opacity: 0; transform: translateY(-15px) scale(0.98); }
@@ -165,7 +171,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.6</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.7</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -228,7 +234,6 @@
         log('Discord: @dprits2. Ready.');
     }
 
-    // re-written to utilize AbortController and EventTarget.addEventListener to prevent persistent closures and memory leaks
     function makeDraggable(element, handle) {
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
         let activeDragController = null;
@@ -237,6 +242,11 @@
             e.preventDefault();
             pos3 = e.clientX;
             pos4 = e.clientY;
+
+            const rect = element.getBoundingClientRect();
+            element.style.left = rect.left + 'px';
+            element.style.top = rect.top + 'px';
+            element.style.right = 'auto';
 
             activeDragController = new AbortController();
 
@@ -248,7 +258,6 @@
                 pos4 = e.clientY;
                 element.style.top = (element.offsetTop - pos2) + "px";
                 element.style.left = (element.offsetLeft - pos1) + "px";
-                element.style.right = 'auto';
             }, { signal: activeDragController.signal });
 
             document.addEventListener('mouseup', () => {
@@ -275,7 +284,6 @@
     }
 
     function sendArrowDown() {
-        // --- support for both old ui and new ui ---
         const nextBtn = getActiveElement('button[data-e2e="arrow-right"]') ||
                         getActiveElement('button[aria-label="Next video" i]');
 
@@ -328,82 +336,95 @@
     }
 
     async function processLoop() {
+        if (isProcessingLoop) return;
         isProcessingLoop = true;
 
-        while (isRunning) {
-            const currentUrl = window.location.href;
-            if (currentUrl === lastUrl) {
-                stuckCount++;
-                if (stuckCount >= STUCK_LIMIT) {
-                    log('Stuck on same video. Stopping bot.', 'error');
-                    toggleScript();
-                    break;
-                }
-            } else {
-                stuckCount = 0;
-                lastUrl = currentUrl;
-            }
-
-            if (batchCount >= currentBatchLimit) {
-                const breakTimeSeconds = randomDelay(10, 15);
-                log(`Rate-limit prevention: Sleeping ${breakTimeSeconds}s...`, 'warn');
-
-                for (let i = breakTimeSeconds; i > 0; i--) {
-                    if (!isRunning) break;
-                    if (i % 5 === 0 || i <= 3) log(`Resuming in ${i}s...`, 'info');
-                    await delay(1000);
-                }
-
-                batchCount = 0;
-                currentBatchLimit = randomDelay(15, 25);
-            }
-
-            if (!isRunning) break;
-
-            await delay(randomDelay(2000, 3000));
-
-            // --- support for both old ui and new ui ---
-            const oldRepostBtn = getActiveElement('a[data-e2e="video-share-repost"]');
-
-            if (oldRepostBtn) {
-                const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
-                const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
-
-                if (validLabels.some(label => ariaLabel.includes(label))) {
-                    oldRepostBtn.click();
-                    count++;
-                    batchCount++;
-                    localStorage.setItem('tur_processed_count', count.toString());
-                    document.getElementById('tur-count').innerText = count;
-                    log(`Unreposted video #${count}`);
-                    await delay(randomDelay(1500, 2500));
+        try {
+            while (isRunning) {
+                const currentUrl = window.location.href;
+                if (currentUrl === lastUrl) {
+                    stuckCount++;
+                    if (stuckCount >= STUCK_LIMIT) {
+                        log('Stuck on same video. Stopping bot.', 'error');
+                        isRunning = false;
+                        break;
+                    }
                 } else {
-                    log('Video not reposted. Skipping.');
+                    stuckCount = 0;
+                    lastUrl = currentUrl;
                 }
-            } else {
-                const shareIcon = getActiveElement('div[data-e2e="share-icon"]') || getActiveElement('button[data-e2e="share-icon"]');
 
-                if (shareIcon) {
-                    shareIcon.click();
-                    await delay(randomDelay(400, 600));
+                if (batchCount >= currentBatchLimit) {
+                    const breakTimeSeconds = randomDelay(10, 15);
+                    log(`Rate-limit prevention: Sleeping ${breakTimeSeconds}s...`, 'warn');
 
-                    const shareMenuRepostBtn = document.querySelector('[data-e2e="share-repost"]');
+                    for (let i = breakTimeSeconds; i > 0; i--) {
+                        if (!isRunning) break;
+                        if (i % 5 === 0 || i <= 3) log(`Resuming in ${i}s...`, 'info');
+                        await delay(1000);
+                    }
 
-                    if (shareMenuRepostBtn) {
-                        const btnText = (shareMenuRepostBtn.textContent || '').toLowerCase();
-                        const validRemoveLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+                    batchCount = 0;
+                    currentBatchLimit = randomDelay(15, 25);
+                }
 
-                        if (validRemoveLabels.some(label => btnText.includes(label))) {
-                            shareMenuRepostBtn.click();
-                            count++;
-                            batchCount++;
-                            localStorage.setItem('tur_processed_count', count.toString());
-                            document.getElementById('tur-count').innerText = count;
-                            log(`Unreposted video #${count}`);
-                            await delay(randomDelay(1500, 2500));
+                if (!isRunning) break;
+
+                await delay(randomDelay(2000, 3000));
+
+                // --- 1. OLD UI CHECK ---
+                const oldRepostBtn = getActiveElement('a[data-e2e="video-share-repost"]');
+
+                if (oldRepostBtn) {
+                    const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
+                    const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+
+                    if (validLabels.some(label => ariaLabel.includes(label))) {
+                        oldRepostBtn.click();
+                        count++;
+                        batchCount++;
+                        localStorage.setItem('tur_processed_count', count.toString());
+                        document.getElementById('tur-count').innerText = count;
+                        log(`Unreposted video #${count}`);
+                        await delay(randomDelay(1500, 2500));
+                    } else {
+                        log('Video not reposted. Skipping.');
+                    }
+                } else {
+                    // --- 2. NEW UI (SHARE MENU DETECTION) ---
+                    const shareIcon = getActiveElement('div[data-e2e="share-icon"]') || getActiveElement('button[data-e2e="share-icon"]');
+
+                    if (shareIcon) {
+                        shareIcon.click();
+                        await delay(randomDelay(400, 600));
+
+                        const shareMenuRepostBtn = document.querySelector('[data-e2e="share-repost"]');
+
+                        if (shareMenuRepostBtn) {
+                            const btnText = (shareMenuRepostBtn.textContent || '').toLowerCase();
+                            const validRemoveLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+
+                            if (validRemoveLabels.some(label => btnText.includes(label))) {
+                                shareMenuRepostBtn.click();
+                                count++;
+                                batchCount++;
+                                localStorage.setItem('tur_processed_count', count.toString());
+                                document.getElementById('tur-count').innerText = count;
+                                log(`Unreposted video #${count}`);
+                                await delay(randomDelay(1500, 2500));
+                            } else {
+                                log('Video not reposted by you. Skipping.');
+                                const closeBtn = document.querySelector('button[aria-label="close" i], .TUXNavBarIconButton');
+                                if (closeBtn) {
+                                    closeBtn.click();
+                                } else {
+                                    shareIcon.click();
+                                }
+                                await delay(randomDelay(300, 500));
+                            }
                         } else {
-                            log('Video not reposted. Skipping.');
-                            const closeBtn = document.querySelector('button[aria-label="close"]');
+                            log('Repost option missing from Share menu.', 'warn');
+                            const closeBtn = document.querySelector('button[aria-label="close" i], .TUXNavBarIconButton');
                             if (closeBtn) {
                                 closeBtn.click();
                             } else {
@@ -412,47 +433,40 @@
                             await delay(randomDelay(300, 500));
                         }
                     } else {
-                        log('Repost button missing from DOM.', 'warn');
-                        const closeBtn = document.querySelector('button[aria-label="close"]');
-                        if (closeBtn) {
-                            closeBtn.click();
-                        } else {
-                            shareIcon.click();
-                        }
-                        await delay(randomDelay(300, 500));
+                        log('Share icon missing from DOM.', 'warn');
                     }
-                } else {
-                    log('Share icon missing from DOM.', 'warn');
                 }
+
+                if (!isRunning) break;
+
+                await ensureScroll();
+                await delay(randomDelay(500, 1000));
             }
-
-            if (!isRunning) break;
-
-            await ensureScroll();
-            await delay(randomDelay(500, 1000));
-        }
-
-        isProcessingLoop = false;
-
-        const btn = document.getElementById('tur-toggle-btn');
-        if (btn && !isRunning) {
-            btn.innerText = 'Start Auto-Unrepost';
-            btn.classList.remove('tur-btn-active');
+        } catch (err) {
+            log(`Unexpected error: ${err.message}`, 'error');
+            isRunning = false;
+        } finally {
+            isProcessingLoop = false;
+            const btn = document.getElementById('tur-toggle-btn');
+            if (btn && !isRunning) {
+                btn.innerText = 'Start Auto-Unrepost';
+                btn.classList.remove('tur-btn-active');
+            }
         }
     }
 
-    // replaced setInterval with MutationObserver for better performance
     function initObserver() {
         const uiObserver = new MutationObserver(() => {
             if (!document.getElementById('tur-panel') && document.body) {
                 createUI();
+                uiObserver.disconnect();
             }
         });
         if (document.body) {
-            uiObserver.observe(document.body, { childList: true, subtree: true });
+            uiObserver.observe(document.body, { childList: true, subtree: false });
         } else {
             window.addEventListener('DOMContentLoaded', () => {
-                uiObserver.observe(document.body, { childList: true, subtree: true });
+                uiObserver.observe(document.body, { childList: true, subtree: false });
             });
         }
     }
