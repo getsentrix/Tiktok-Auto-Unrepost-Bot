@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.7
+// @version      11.7.1
 // @description  TikTok unrepost script that actually works. +Performance/UI Improvements
 // @author       Dylan
 // @match        https://www.tiktok.com/*
@@ -171,7 +171,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.7</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.7.1</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -377,7 +377,7 @@
 
                 if (oldRepostBtn) {
                     const ariaLabel = (oldRepostBtn.getAttribute('aria-label') || '').toLowerCase();
-                    const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+                    const validLabels = ['remove repost', 'eliminar repost', 'supprimer le repost', 'supprimer la republication', 'eliminar republicación', 'remover republicação', 'repost entfernen', 'rimuovi ripubblicazione'];
 
                     if (validLabels.some(label => ariaLabel.includes(label))) {
                         oldRepostBtn.click();
@@ -402,7 +402,7 @@
 
                         if (shareMenuRepostBtn) {
                             const btnText = (shareMenuRepostBtn.textContent || '').toLowerCase();
-                            const validRemoveLabels = ['remove repost', 'eliminar repost', 'supprimer le repost'];
+                            const validRemoveLabels = ['remove repost', 'eliminar repost', 'supprimer le repost', 'supprimer la republication', 'eliminar republicación', 'remover republicação', 'repost entfernen', 'rimuovi ripubblicazione'];
 
                             if (validRemoveLabels.some(label => btnText.includes(label))) {
                                 shareMenuRepostBtn.click();
