@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         TikTok Unrepost Bot Beta
+// @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
 // @version      11.7.2
 // @description  TikTok unrepost script that actually works. +Performance/UI Improvements
