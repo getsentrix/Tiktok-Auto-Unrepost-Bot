@@ -315,7 +315,7 @@
                     <span id="tur-close-tut" style="cursor: pointer; color: #ff5c5c; font-weight: bold; font-size: 14px;">✕</span>
                 </div>
                 <div style="font-size: 11px; line-height: 1.5; color: #bbb;">
-                    <b>1.</b> Navigate to your profile page.<br><br>
+                    <b>1.</b> Navigate to your profile page, and open the Reposts tab.<br><br>
                     <b>2.</b> Click <b>Unhide Reposts Tab</b> if the tab is hidden by TikTok.<br><br>
                     <b>3.</b> Wait for videos to load. Open the <b>FIRST</b> video in the grid so it occupies the screen.<br><br>
                     <b>4.</b> If you only see a blank black page, go to your For You page and manually repost a video to refresh TikTok's cache. Also try enabling a VPN.<br><br>
