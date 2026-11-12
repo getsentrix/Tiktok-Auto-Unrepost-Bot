@@ -1,18 +1,20 @@
+<!-- index.html — TikTok Auto Unrepost Bot Showcase -->
+<!-- language: html / css / javascript | runtime: browser | target: github pages -->
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Auto Unrepost Bot | Mass Unrepost on Autopilot</title>
-    <meta name="description" content="A premium, open-source browser script that automatically removes your TikTok reposts. Safe delays, skips photo slideshows, features smart auto-pausing, and runs 100% locally.">
+    <title>TikTok Auto Unrepost Bot — Clean Your Reposts Free</title>
+    <meta name="description" content="A simple, free browser script that removes all your TikTok reposts on autopilot. Safe delays, skips photo slideshows, and no passwords required.">
     <meta name="theme-color" content="#09090b">
 
-    <!-- Fonts -->
+    <!-- Fonts: Plus Jakarta Sans & JetBrains Mono (from Figma Free Fonts reference) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CDN for GitHub Pages + Custom Extensions -->
+    <!-- Tailwind CDN for GitHub Pages -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -26,30 +28,10 @@
                     colors: {
                         brand: {
                             red: '#ff3b5c',
-                            cyan: '#00f2fe',
                             accent: '#ff4757',
                             dark: '#09090b',
-                            card: '#121217',
+                            card: '#121215',
                             border: 'rgba(255, 255, 255, 0.08)'
-                        }
-                    },
-                    animation: {
-                        'pulse-slow': 'pulseGlow 4s ease-in-out infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'scanline': 'scanline 8s linear infinite',
-                    },
-                    keyframes: {
-                        pulseGlow: {
-                            '0%, 100%': { opacity: '0.3', transform: 'scale(1)' },
-                            '50%': { opacity: '0.6', transform: 'scale(1.02)' },
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
-                            '50%': { transform: 'translateY(-12px) rotate(0.5deg)' },
-                        },
-                        scanline: {
-                            '0%': { transform: 'translateY(-100%)' },
-                            '100%': { transform: 'translateY(100%)' }
                         }
                     }
                 }
@@ -60,7 +42,7 @@
     <style>
         body {
             background-color: #09090b;
-            color: #ededed;
+            color: #ececec;
             font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
             overflow-x: hidden;
         }
@@ -70,556 +52,266 @@
             color: #ffffff;
         }
 
-        /* Ambient Backdrop System */
-        .bg-grid {
-            background-size: 50px 50px;
-            background-image: 
-                linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        /* Ambient Glow Backdrop (from gradients resource) */
+        .ambient-bg {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            max-width: 1400px;
+            height: 700px;
+            background: url('assets/bg.jpg') no-repeat top center;
+            background-size: cover;
+            opacity: 0.28;
+            filter: blur(40px);
+            pointer-events-none;
+            z-index: 0;
         }
 
-        .glow-radial {
-            background: radial-gradient(circle at 50% 15%, rgba(255, 59, 92, 0.14) 0%, rgba(0, 242, 254, 0.04) 40%, transparent 65%);
+        .ambient-mesh {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 18%, rgba(255, 59, 92, 0.12) 0%, transparent 60%);
+            pointer-events-none;
+            z-index: 0;
         }
 
-        /* Enhanced Glassmorphism styling */
+        /* Glass Cards */
         .glass-card {
-            background: rgba(18, 18, 24, 0.65);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(18, 18, 22, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
         }
 
         .glass-card-hover {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.25s ease;
         }
-
         .glass-card-hover:hover {
-            transform: translateY(-6px);
+            transform: translateY(-2px);
             border-color: rgba(255, 255, 255, 0.16);
-            background: rgba(22, 22, 30, 0.8);
-            box-shadow: 0 30px 60px -10px rgba(255, 59, 92, 0.1), 0 0 40px -5px rgba(0, 242, 254, 0.05);
         }
 
-        /* Gradient Typography */
-        .text-gradient {
-            background: linear-gradient(135deg, #ffffff 20%, #a1a1aa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        /* Pulse for Running Demo */
+        @keyframes demoPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+        }
+        .demo-running {
+            animation: demoPulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
         }
 
-        .text-gradient-brand {
-            background: linear-gradient(135deg, #ff3b5c 0%, #ff6b8b 45%, #00f2fe 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        /* Custom Scrollbar for Terminal */
+        .terminal-scroll::-webkit-scrollbar {
+            width: 4px;
         }
-
-        /* Interactive Dynamic Scrollbars */
-        .sim-scroll::-webkit-scrollbar {
-            width: 5px;
-        }
-        .sim-scroll::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-        .sim-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 9px;
-        }
-        .sim-scroll::-webkit-scrollbar-thumb:hover {
-            background: #ff3b5c;
-        }
-
-        /* Pulse FX for Running Bot Simulation */
-        @keyframes dynamicPulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 59, 92, 0.5); }
-            70% { box-shadow: 0 0 0 12px rgba(255, 59, 92, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 59, 92, 0); }
-        }
-        .sim-pulse-active {
-            animation: dynamicPulse 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
         }
     </style>
 </head>
-<body class="relative min-h-screen selection:bg-brand-red selection:text-white">
+<body class="relative min-h-screen">
 
-    <!-- Ambient Backdrop Assets -->
-    <div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
-    <div class="fixed inset-0 glow-radial pointer-events-none z-0 animate-pulse-slow"></div>
+    <!-- Ambient Glow from Resources -->
+    <div class="ambient-bg"></div>
+    <div class="ambient-mesh"></div>
 
-    <!-- Navigation Header -->
-    <header class="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4">
-        <div class="max-w-7xl mx-auto">
-            <nav class="glass-card rounded-2xl px-6 py-4 flex items-center justify-between border-white/10 shadow-2xl transition-all duration-300">
-                <!-- Branding Info -->
-                <a href="#" class="flex items-center gap-3.5 group">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red via-purple-600 to-brand-cyan flex items-center justify-center font-bold text-white shadow-xl shadow-brand-red/10 group-hover:scale-105 transition-transform duration-300">
-                        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                            <path d="M21 3v5h-5"/>
-                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                            <path d="M8 16H3v5"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="font-black text-lg tracking-tight text-white">Unrepost Bot</span>
-                            <span class="bg-brand-red/10 text-brand-red text-[10px] font-bold px-2 py-0.5 rounded-md border border-brand-red/20 tracking-wider">v11.8.0</span>
-                        </div>
-                        <p class="text-[9px] text-zinc-400 font-mono tracking-widest uppercase">Automated Cleanup Suite</p>
-                    </div>
+    <!-- Navigation -->
+    <header class="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 pt-6">
+        <nav class="glass-card rounded-2xl px-5 py-3 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center font-bold text-white text-xs">
+                    TUR
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-white text-sm tracking-tight">TikTok Unrepost Bot</span>
+                    <span class="bg-white/10 text-zinc-300 text-[11px] font-mono px-2 py-0.5 rounded-full">v11.8</span>
+                </div>
+            </a>
+
+            <div class="flex items-center gap-3">
+                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="p-2 text-zinc-400 hover:text-white rounded-lg transition-colors" title="GitHub">
+                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                    </svg>
                 </a>
-
-                <!-- Nav Links -->
-                <div class="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
-                    <a href="#features" class="hover:text-white transition-colors duration-200">Features</a>
-                    <a href="#simulator" class="hover:text-white transition-colors duration-200">Interactive Demo</a>
-                    <a href="#install" class="hover:text-white transition-colors duration-200">Installation</a>
-                    <a href="#faq" class="hover:text-white transition-colors duration-200">FAQ</a>
-                </div>
-
-                <!-- Call to Action Controls -->
-                <div class="flex items-center gap-3">
-                    <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noopener noreferrer" class="p-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-200 border border-transparent hover:border-white/10" title="Source GitHub Repository">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                        </svg>
-                    </a>
-                    <a href="https://greasyfork.org" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-red to-rose-600 hover:from-rose-500 hover:to-brand-red text-white text-xs sm:text-sm font-bold shadow-lg shadow-brand-red/20 flex items-center gap-2 transform active:scale-[0.98] transition-all">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7 10 12 15 17 10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
-                        </svg>
-                        <span>Install Script</span>
-                    </a>
-                </div>
-            </nav>
-        </div>
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition-colors">
+                    Install Script
+                </a>
+            </div>
+        </nav>
     </header>
 
-    <!-- App Viewport Showcase Shell -->
-    <main class="relative z-10 pt-36 pb-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-32">
+    <!-- Main Container -->
+    <main class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-20 space-y-24">
 
-        <!-- Hero Section -->
-        <section class="text-center pt-6 sm:pt-12 space-y-6 max-w-4xl mx-auto animate-float">
-            <!-- Badges Bar -->
-            <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass-card border-brand-red/30 text-xs font-mono text-zinc-300">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Optimized for Desktop TikTok Feed</span>
-                <span class="text-zinc-600">|</span>
-                <span class="text-brand-cyan font-semibold">100% Client-Side Architecture</span>
+        <!-- Hero Section (Clear, bold, zero fluff) -->
+        <section class="text-center space-y-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card text-xs font-mono text-zinc-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Free & Open Source</span>
+                <span class="text-zinc-600">•</span>
+                <span>No Passwords Needed</span>
             </div>
 
-            <!-- Header Text -->
-            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.05]">
-                <span class="text-gradient">Clean your TikTok reposts.</span><br>
-                <span class="text-gradient-brand">Completely on autopilot.</span>
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
+                Clear all your TikTok reposts.<br>
+                <span class="text-brand-red">Without clicking every single one.</span>
             </h1>
 
-            <!-- Narrative Intro -->
-            <p class="text-base sm:text-xl text-zinc-400 font-normal max-w-2xl mx-auto leading-relaxed">
-                A streamlined browser userscript designed to clean up your profile feed securely. Automatically bypasses photo-sets, randomizes interactions to prevent rate-limits, and executes without account logins.
+            <p class="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto leading-relaxed">
+                A lightweight browser script that automatically navigates through your reposts feed and removes them for you. Safe pauses, skips photo slideshows, and runs in the background.
             </p>
 
-            <!-- Buttons -->
-            <div class="pt-4 flex flex-wrap items-center justify-center gap-4">
-                <a href="https://greasyfork.org" class="px-6 py-4 rounded-xl bg-white hover:bg-zinc-200 text-black font-extrabold text-sm shadow-xl shadow-white/5 flex items-center gap-2.5 transform active:scale-95 transition-all">
-                    <svg class="w-4 h-4 text-brand-red fill-current" viewBox="0 0 24 24">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    <span>Deploy via Userscript Manager</span>
+            <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-6 py-3 rounded-xl bg-brand-red hover:bg-rose-500 text-white font-bold text-sm transition-all shadow-lg shadow-brand-red/20">
+                    Install Script (Free)
                 </a>
-                <a href="#simulator" class="px-6 py-4 rounded-xl glass-card hover:bg-white/5 text-zinc-300 hover:text-white font-semibold text-sm border-white/10 flex items-center gap-2 transition-all">
-                    <span>Explore Interactive Demo</span>
-                    <svg class="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M19 14l-7 7-7-7m14-6l-7 7-7-7"/>
-                    </svg>
+                <a href="#how-to-use" class="px-6 py-3 rounded-xl glass-card hover:bg-white/5 text-zinc-300 hover:text-white font-semibold text-sm transition-colors">
+                    How it works ↓
                 </a>
-            </div>
-
-            <!-- Value Matrix Grid -->
-            <div class="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-4xl mx-auto">
-                <div class="glass-card p-4 rounded-2xl border-white/5 text-center">
-                    <div class="text-2xl font-black font-mono text-white">0\$ Fees</div>
-                    <div class="text-[10px] text-zinc-400 font-mono uppercase tracking-wider mt-1">Open-Source Engine</div>
-                </div>
-                <div class="glass-card p-4 rounded-2xl border-white/5 text-center">
-                    <div class="text-2xl font-black font-mono text-brand-cyan">Adaptive</div>
-                    <div class="text-[10px] text-zinc-400 font-mono uppercase tracking-wider mt-1">Anti-Detection Shifts</div>
-                </div>
-                <div class="glass-card p-4 rounded-2xl border-white/5 text-center">
-                    <div class="text-2xl font-black font-mono text-brand-red">12+ Locales</div>
-                    <div class="text-[10px] text-zinc-400 font-mono uppercase tracking-wider mt-1">Global UI Multi-Match</div>
-                </div>
-                <div class="glass-card p-4 rounded-2xl border-white/5 text-center">
-                    <div class="text-2xl font-black font-mono text-emerald-400">Zero Data</div>
-                    <div class="text-[10px] text-zinc-400 font-mono uppercase tracking-wider mt-1">No Server Logs Required</div>
-                </div>
             </div>
         </section>
 
-        <!-- Interactive Live Simulation Environment -->
-        <section id="simulator" class="pt-4 scroll-mt-24">
-            <div class="text-center space-y-3 mb-12">
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan font-mono text-xs font-semibold tracking-wider">LIVE VIEWPORT LAB</div>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Interactive Execution Sandbox</h2>
-                <p class="text-zinc-400 text-sm max-w-xl mx-auto">Configure options and switch the toggle switch in the controller panel to inspect automation heuristics.</p>
+        <!-- Interactive Live Widget Preview (Direct, clean simulator) -->
+        <section class="space-y-4">
+            <div class="text-center space-y-1">
+                <p class="text-xs font-mono uppercase tracking-wider text-zinc-500">Interactive Preview</p>
+                <h2 class="text-xl font-bold text-white">This is what appears on your TikTok page</h2>
+                <p class="text-xs text-zinc-400">Click "Start Auto-Unrepost" below to watch the live simulation.</p>
             </div>
 
-            <!-- Emulator Wrapper -->
-            <div class="relative glass-card rounded-3xl p-5 sm:p-8 border-white/10 max-w-5xl mx-auto overflow-hidden">
-                <!-- Browser Framing Banner -->
-                <div class="flex items-center justify-between border-b border-white/5 pb-4 mb-6">
+            <!-- Injected Panel Mockup -->
+            <div class="glass-card rounded-2xl p-6 max-w-md mx-auto shadow-2xl space-y-4 border border-white/10">
+                <!-- Panel Header -->
+                <div class="flex items-center justify-between border-b border-white/10 pb-3">
                     <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-red-500/70"></div>
-                        <div class="w-3 h-3 rounded-full bg-yellow-500/70"></div>
-                        <div class="w-3 h-3 rounded-full bg-green-500/70"></div>
-                        <div class="ml-2 bg-zinc-900 px-3 py-1 rounded-md border border-white/5 flex items-center gap-1.5">
-                            <svg class="w-3 h-3 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                            <span class="text-[11px] font-mono text-zinc-400">://tiktok.com</span>
-                        </div>
+                        <span class="w-2.5 h-2.5 rounded-full bg-brand-red"></span>
+                        <span class="font-semibold text-xs text-white">Unrepost Bot v11.8.0</span>
                     </div>
-                    <div class="flex items-center gap-2 text-xs font-mono text-zinc-400">
-                        <span class="w-2 h-2 rounded-full bg-brand-cyan animate-pulse"></span>
-                        <span class="tracking-wide">SANDBOX ATTACHED</span>
+                    <span class="text-[10px] font-mono text-zinc-500">DRAGGABLE WINDOW</span>
+                </div>
+
+                <!-- Unhide Reposts Button -->
+                <button id="sim-unhide" class="w-full bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 text-xs font-medium py-2 rounded-lg transition-colors">
+                    Unhide Reposts Tab
+                </button>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
+                        <div class="text-[10px] text-zinc-500 uppercase font-mono">Current</div>
+                        <div class="text-base font-bold text-white font-mono mt-0.5" id="sim-current">0</div>
+                    </div>
+                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
+                        <div class="text-[10px] text-zinc-500 uppercase font-mono">Skipped</div>
+                        <div class="text-base font-bold text-zinc-400 font-mono mt-0.5" id="sim-skipped">0</div>
+                    </div>
+                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
+                        <div class="text-[10px] text-zinc-500 uppercase font-mono">All-Time</div>
+                        <div class="text-base font-bold text-emerald-400 font-mono mt-0.5" id="sim-total">1,420</div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                    
-                    <!-- Left Column: Simulated TikTok Web Framework -->
-                    <div class="lg:col-span-7 bg-[#0b0b0f] rounded-2xl border border-white/5 p-5 flex flex-col justify-between min-h-[460px] relative overflow-hidden group">
-                        
-                        <!-- Dynamic Media Content Window Overlay -->
-                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-950/20 to-zinc-950 pointer-events-none z-0"></div>
+                <!-- Primary Action -->
+                <button id="sim-toggle" class="w-full bg-white hover:bg-zinc-200 text-black font-bold text-xs py-2.5 rounded-lg transition-all">
+                    Start Auto-Unrepost
+                </button>
 
-                        <!-- Post Elements Header -->
-                        <div class="flex items-center justify-between z-10 bg-zinc-900/60 p-3 rounded-xl border border-white/5 backdrop-blur-md">
-                            <div class="flex items-center gap-3">
-                                <div id="sim-avatar" class="w-9 h-9 rounded-full bg-gradient-to-tr from-brand-red to-purple-600 flex items-center justify-center font-bold text-white text-xs select-none">
-                                    TT
-                                </div>
-                                <div>
-                                    <div class="font-bold text-sm text-white flex items-center gap-1.5">
-                                        <span id="sim-author">@creativetrends</span>
-                                        <div class="w-3.5 h-3.5 bg-brand-cyan rounded-full flex items-center justify-center text-black font-black text-[8px]" title="Simulated Verified Badge">✓</div>
-                                    </div>
-                                    <div class="text-[10px] text-zinc-500 font-mono tracking-tight" id="sim-post-id">UID: 738192847291823</div>
-                                </div>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/5 text-[10px] font-mono text-zinc-400 uppercase tracking-wider" id="sim-media-type">
-                                📹 Video Media
-                            </span>
-                        </div>
-
-                        <!-- Media Display Graphics Panel -->
-                        <div class="my-auto py-12 flex flex-col items-center justify-center text-center z-10 transition-all duration-300 relative" id="sim-media-card">
-                            <div class="w-20 h-20 rounded-2xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-4 text-zinc-400 group-hover:scale-105 transition-all shadow-2xl relative" id="sim-media-icon">
-                                <div class="absolute inset-0 bg-gradient-to-br from-brand-red/10 to-transparent rounded-2xl"></div>
-                                <svg class="w-8 h-8 text-brand-red animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
-                                </svg>
-                            </div>
-                            <h3 class="font-bold text-base text-zinc-100 max-w-md px-4 line-clamp-2" id="sim-caption">Viral Transition Trend #fyp #viral</h3>
-                            
-                            <div class="flex items-center gap-2 mt-2 bg-brand-red/10 px-3 py-1 rounded-full border border-brand-red/20">
-                                <svg class="w-3 h-3 text-brand-red fill-current" viewBox="0 0 24 24"><path d="M19 8l-7 7-7-7"/></svg>
-                                <p class="text-[11px] font-medium text-brand-red" id="sim-reposted-by">You reposted this item</p>
-                            </div>
-
-                            <!-- Toast Element Popup -->
-                            <div id="sim-toast" class="absolute bottom-[-10px] opacity-0 pointer-events-none transform translate-y-2 transition-all duration-300 px-4 py-2.5 rounded-xl bg-zinc-900 border border-emerald-500/40 text-emerald-400 text-xs font-semibold shadow-2xl flex items-center gap-2">
-                                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                                <span>DOM Event: Repost Removed Successfully</span>
-                            </div>
-                        </div>
-
-                        <!-- Post Interaction Footer Controls -->
-                        <div class="border-t border-white/5 pt-4 flex items-center justify-between text-xs text-zinc-500 z-10">
-                            <span id="sim-feed-status" class="font-mono text-[11px] text-zinc-400">Pipeline State: Idle (Post index 1/80)</span>
-                            <div class="flex items-center gap-2">
-                                <button id="sim-manual-next" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-medium border border-white/5 active:bg-zinc-800 transition-all">
-                                    Skip Track ↓
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Simulating Injected Userscript Control Overlay -->
-                    <div class="lg:col-span-5 flex flex-col justify-center">
-                        <div class="bg-[#121216] border border-[#26262f] rounded-2xl p-5 text-[#eaeaea] shadow-2xl w-full max-w-sm mx-auto select-none relative overflow-hidden" id="sim-bot-panel">
-                            
-                            <!-- Internal Accent Line -->
-                            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-brand-red via-purple-500 to-brand-cyan"></div>
-
-                            <!-- Panel Header -->
-                            <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-                                <div class="flex items-center gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-brand-red animate-pulse"></div>
-                                    <span class="font-bold text-xs tracking-wide text-white font-mono">X-REPOST-ENGINE v11.8.0</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 font-mono text-[10px]">
-                                    <span id="sim-btn-config" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer transition-colors" onclick="toggleConfigTab()">SETTINGS</span>
-                                    <span id="sim-btn-help" class="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-brand-cyan cursor-pointer font-bold transition-colors">HELP</span>
-                                </div>
-                            </div>
-
-                            <!-- Panel Body Container -->
-                            <div class="space-y-4" id="sim-panel-body">
-                                
-                                <!-- Extension View Mode Tab: Settings Config (Hidden by Default) -->
-                                <div id="sim-config-tab" class="hidden bg-zinc-950 p-3 rounded-xl border border-white/5 space-y-2 text-xs">
-                                    <div class="font-bold text-[11px] text-zinc-400 uppercase tracking-wider mb-1 font-mono">Execution Profiles</div>
-                                    <label class="flex items-center justify-between cursor-pointer text-zinc-300">
-                                        <span>Bypass Slideshow Media</span>
-                                        <input type="checkbox" id="cfg-skip-slides" checked class="accent-brand-red">
-                                    </label>
-                                    <label class="flex items-center justify-between cursor-pointer text-zinc-300">
-                                        <span>Humanizing Shift Delays</span>
-                                        <input type="checkbox" id="cfg-human-delay" checked class="accent-brand-red">
-                                    </label>
-                                    <div class="text-[10px] text-zinc-500 pt-1 border-t border-zinc-800 font-mono">Modifies interval timing configurations dynamically.</div>
-                                </div>
-
-                                <button id="sim-unhide-btn" class="w-full bg-[#1b1b24] hover:bg-[#23232e] text-zinc-200 border border-white/5 text-xs font-semibold py-2 px-3 rounded-lg active:scale-[0.99] transition-all flex items-center justify-center gap-2">
-                                    <svg class="w-3.5 h-3.5 text-brand-cyan" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                    <span>Force Unhide Reposts Tab</span>
-                                </button>
-
-                                <!-- Performance Metric Indicators -->
-                                <div class="grid grid-cols-3 gap-2">
-                                    <div class="bg-zinc-950 border border-white/5 rounded-xl p-2.5 text-center">
-                                        <div class="text-[9px] text-zinc-500 uppercase tracking-wider font-mono font-medium">Session Removed</div>
-                                        <div class="text-base font-black text-white mt-0.5 font-mono" id="sim-stat-current">0</div>
-                                    </div>
-                                    <div class="bg-zinc-950 border border-white/5 rounded-xl p-2.5 text-center">
-                                        <div class="text-[9px] text-zinc-500 uppercase tracking-wider font-mono font-medium">Skipped Items</div>
-                                        <div class="text-base font-black text-amber-500 mt-0.5 font-mono" id="sim-stat-skipped">0</div>
-                                    </div>
-                                    <div class="bg-zinc-950 border border-white/5 rounded-xl p-2.5 text-center">
-                                        <div class="text-[9px] text-zinc-500 uppercase tracking-wider font-mono font-medium">Global Counter</div>
-                                        <div class="text-base font-black text-emerald-400 mt-0.5 font-mono" id="sim-stat-total">1,248</div>
-                                    </div>
-                                </div>
-
-                                <!-- Execution Primary Action Button Trigger -->
-                                <button id="sim-toggle-btn" class="w-full bg-white hover:bg-zinc-200 text-black font-bold text-xs py-3 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                                    <span>Initialize Automation Daemon</span>
-                                </button>
-
-                                <!-- Script Console Debugger System -->
-                                <div class="h-32 bg-black border border-white/5 rounded-xl p-3 font-mono text-[11px] space-y-1.5 overflow-y-auto sim-scroll" id="sim-console">
-                                    <div class="text-zinc-500">[SYSTEM] Local runtime environment loaded.</div>
-                                    <div class="text-zinc-400">[READY] Awaiting orchestration trigger loop.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Panel Caption Layout Note -->
-                        <p class="text-center text-[10px] text-zinc-500 font-mono mt-3 uppercase tracking-wider">
-                            Toggle <strong class="text-zinc-400">Initialize Automation Daemon</strong> above to run loop.
-                        </p>
-                    </div>
-
+                <!-- Console Box -->
+                <div class="h-24 bg-black/60 border border-white/5 rounded-lg p-2.5 font-mono text-[11px] space-y-1 overflow-y-auto terminal-scroll text-zinc-400" id="sim-terminal">
+                    <div>[READY] Discord: @dprits2. Ready to unrepost.</div>
                 </div>
             </div>
         </section>
 
-        <!-- Feature Grid Layout -->
-        <section id="features" class="space-y-16 scroll-mt-24">
-            <div class="text-center space-y-3">
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red font-mono text-xs font-semibold tracking-wider">CORE CAPABILITIES</div>
-                <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">Robust DOM Parsing Architecture</h2>
-                <p class="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto">Social layouts evolve regularly. This engine maps layout text nodes and attribute mutations rather than volatile absolute style identifiers.</p>
+        <!-- 3 Highlights (No bullshit) -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
+                <div class="text-brand-red font-mono text-sm font-bold">01 / SAFE PAUSES</div>
+                <h3 class="font-bold text-white text-base">Takes breaks automatically</h3>
+                <p class="text-zinc-400 text-xs leading-relaxed">
+                    Takes a quick 10–15s pause every 15–25 posts so TikTok doesn't flag your account for acting too quickly.
+                </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Grid Block Item 1 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-brand-red/10 border border-brand-red/20 flex items-center justify-center text-brand-red shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="2" y="2" width="20" height="20" rx="2" ry="2"/>
-                            <path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Carousel Exclusion System</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Identifies explicit structural tokens denoting multi-image sliders. Seamlessly rolls past photo carousels to avoid timeline tracking freezes.
+            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
+                <div class="text-brand-red font-mono text-sm font-bold">02 / SLIDESHOW SAFE</div>
+                <h3 class="font-bold text-white text-base">Never gets stuck on photos</h3>
+                <p class="text-zinc-400 text-xs leading-relaxed">
+                    Knows the difference between horizontal photo slides and vertical feed posts. Scrolls down to the next video cleanly.
+                </p>
+            </div>
+
+            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
+                <div class="text-brand-red font-mono text-sm font-bold">03 / UNHIDE TAB</div>
+                <h3 class="font-bold text-white text-base">Fixes missing Reposts tab</h3>
+                <p class="text-zinc-400 text-xs leading-relaxed">
+                    TikTok hides the Reposts tab on desktop browsers. The built-in "Unhide Reposts Tab" button restores it in one click.
+                </p>
+            </div>
+        </section>
+
+        <!-- How To Use (3 Steps) -->
+        <section id="how-to-use" class="space-y-6">
+            <div class="text-center space-y-1">
+                <p class="text-xs font-mono uppercase tracking-wider text-zinc-500">Quick Setup</p>
+                <h2 class="text-2xl font-bold text-white">How to use it</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-card rounded-xl p-5 space-y-3">
+                    <span class="text-xs font-mono bg-white/10 text-white px-2 py-0.5 rounded">Step 1</span>
+                    <h3 class="font-bold text-white text-sm">Install Tampermonkey</h3>
+                    <p class="text-zinc-400 text-xs leading-relaxed">
+                        Add the free <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" class="text-brand-red underline hover:text-white">Tampermonkey</a> extension to Chrome, Firefox, Brave, or Edge.
                     </p>
                 </div>
 
-                <!-- Grid Block Item 2 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-brand-cyan/10 border border-brand-cyan/20 flex items-center justify-center text-brand-cyan shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Anti-Friction Interval Pauses</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Implements dynamic back-off periods every 15 to 25 loops. Jitters structural actions across irregular timing spreads to verify organic traffic signatures.
+                <div class="glass-card rounded-xl p-5 space-y-3 border-brand-red/30">
+                    <span class="text-xs font-mono bg-brand-red/20 text-brand-red px-2 py-0.5 rounded">Step 2</span>
+                    <h3 class="font-bold text-white text-sm">Add the script</h3>
+                    <p class="text-zinc-400 text-xs leading-relaxed">
+                        Click <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="text-brand-red underline hover:text-white">Install Script</a> to add the script to your Tampermonkey extension.
                     </p>
                 </div>
 
-                <!-- Grid Block Item 3 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400 shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">State Verification Hooks</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Polls local UI toast notifications and mutation buffers prior to iterating global telemetry logs. Guarantees error logs capture precise transaction states.
-                    </p>
-                </div>
-
-                <!-- Grid Block Item 4 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-purple-400/10 border border-purple-400/20 flex items-center justify-center text-purple-400 shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Dynamic Language Mappings</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Ships default regex matrices for common international languages (EN, ES, FR, DE, RU, PT, TR, PL, IT) matching native buttons without hardcoded config variables.
-                    </p>
-                </div>
-
-                <!-- Grid Block Item 5 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400 shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Profile View Injection</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Injects structural node hooks to unhide the hidden profile repost tab on conventional web layouts instantly, bypassing profile filter visibility constraints.
-                    </p>
-                </div>
-
-                <!-- Grid Block Item 6 -->
-                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
-                    <div class="w-12 h-12 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center justify-center text-rose-400 shadow-lg">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 2 12 22Z"/>
-                            <path d="M12 16V12"/>
-                            <path d="M12 8H12.01"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-white tracking-tight">Isolated Execution Context</h3>
-                    <p class="text-zinc-400 text-sm leading-relaxed">
-                        Compiles inline inside your active user session. No access tokens, authorization tokens, or external tracker relays map your clean operations.
+                <div class="glass-card rounded-xl p-5 space-y-3">
+                    <span class="text-xs font-mono bg-white/10 text-white px-2 py-0.5 rounded">Step 3</span>
+                    <h3 class="font-bold text-white text-sm">Open reposts & hit start</h3>
+                    <p class="text-zinc-400 text-xs leading-relaxed">
+                        Go to your TikTok profile, open your Reposts tab, click the first video, and press <strong class="text-white">Start Auto-Unrepost</strong>.
                     </p>
                 </div>
             </div>
         </section>
 
-        <!-- Setup Step Matrix Section -->
-        <section id="install" class="space-y-16 scroll-mt-24">
-            <div class="text-center space-y-3">
-                <div class="inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white font-mono text-xs font-semibold tracking-wider">ENVIRONMENT SETUP</div>
-                <h2 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">Deployment Strategy</h2>
-                <p class="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">Get configured in under a minute by embedding the userscript package directly into your local engine context.</p>
-            </div>
+        <!-- FAQ (Only 3 essential questions) -->
+        <section class="space-y-4 max-w-xl mx-auto">
+            <h2 class="text-xl font-bold text-white text-center">Frequently asked questions</h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Steps Matrix 1 -->
-                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative overflow-hidden">
-                    <div class="absolute -right-4 -top-6 text-7xl font-black font-mono text-white/[0.02] select-none">01</div>
-                    <div class="text-3xl font-black font-mono text-zinc-600">01</div>
-                    <h3 class="text-lg font-bold text-white tracking-tight">Initialize Script Manager</h3>
-                    <p class="text-zinc-400 text-xs sm:text-sm leading-relaxed">
-                        Secure a sandbox client environment inside your browser extensions architecture to host custom local automations:
-                    </p>
-                    <div class="flex flex-col gap-2 pt-2">
-                        <a href="https://tampermonkey.net" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-mono font-medium text-zinc-200 flex items-center justify-between group">
-                            <span>Tampermonkey Engine</span>
-                            <span class="text-zinc-500 group-hover:text-white transition-colors">↗</span>
-                        </a>
-                        <a href="https://github.io" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-mono font-medium text-zinc-200 flex items-center justify-between group">
-                            <span>Violentmonkey Core</span>
-                            <span class="text-zinc-500 group-hover:text-white transition-colors">↗</span>
-                        </a>
+            <div class="space-y-2 text-xs">
+                <div class="glass-card rounded-xl p-4 space-y-1">
+                    <div class="font-bold text-white">Will this get my TikTok banned?</div>
+                    <div class="text-zinc-400 leading-relaxed">
+                        No accounts have been banned. The bot takes randomized pauses every 15–25 posts to keep behavior natural. For safety, clear 100–200 posts per day.
                     </div>
                 </div>
 
-                <!-- Steps Matrix 2 -->
-                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative overflow-hidden border-brand-red/30 shadow-brand-red/[0.02]">
-                    <div class="absolute -right-4 -top-6 text-7xl font-black font-mono text-brand-red/[0.02] select-none">02</div>
-                    <div class="text-3xl font-black font-mono text-brand-red/40">02</div>
-                    <h3 class="text-lg font-bold text-white tracking-tight">Mount Userscript File</h3>
-                    <p class="text-zinc-400 text-xs sm:text-sm leading-relaxed">
-                        Fetch and parse the production build package compilation directly into your choice engine environment payload hook:
-                    </p>
-                    <div class="pt-2">
-                        <a href="https://greasyfork.org" class="w-full px-4 py-3.5 rounded-xl bg-gradient-to-r from-brand-red to-rose-600 hover:from-rose-500 hover:to-brand-red text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-xl shadow-brand-red/20 transform active:scale-95 transition-all">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v13M5 10l7 7 7-7"/></svg>
-                            <span>Fetch Production Stable Payload</span>
-                        </a>
+                <div class="glass-card rounded-xl p-4 space-y-1">
+                    <div class="font-bold text-white">Does it need my TikTok password?</div>
+                    <div class="text-zinc-400 leading-relaxed">
+                        Never. It runs completely inside your browser tab on your already logged-in session. It never asks for, sends, or touches your password.
                     </div>
                 </div>
 
-                <!-- Steps Matrix 3 -->
-                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative overflow-hidden">
-                    <div class="absolute -right-4 -top-6 text-7xl font-black font-mono text-white/[0.02] select-none">03</div>
-                    <div class="text-3xl font-black font-mono text-zinc-600">03</div>
-                    <h3 class="text-lg font-bold text-white tracking-tight">Orchestrate Pipeline</h3>
-                    <p class="text-zinc-400 text-xs sm:text-sm leading-relaxed">
-                        Navigate onto your desktop client profile panel, activate the script panel viewport overlay, open your targeted post stack, and trigger execution.
-                    </p>
-                    <div class="p-3.5 rounded-xl bg-zinc-950 border border-white/5 font-mono text-[11px] text-zinc-400 leading-relaxed">
-                        <span class="text-brand-cyan font-bold">PRO-TIP:</span> Maintain focus visibility on your clean-up pipeline tab instances to ensure scroll ticks parse optimally.
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ Accordion Layout Section -->
-        <section id="faq" class="space-y-12 max-w-4xl mx-auto scroll-mt-24">
-            <div class="text-center space-y-3">
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan font-mono text-xs font-semibold tracking-wider">KNOWLEDGE MATRIX</div>
-                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Technical Clarifications</h2>
-            </div>
-
-            <div class="space-y-4">
-                <!-- Accordion Frame 1 -->
-                <div class="glass-card rounded-2xl border-white/5 overflow-hidden transition-all duration-300">
-                    <button class="w-full p-6 text-left font-bold text-white flex items-center justify-between text-sm sm:text-base faq-trigger hover:bg-white/[0.02] transition-colors" onclick="toggleFaqPanel(this)">
-                        <span>Why does web profile architecture conceal the Repost filters by default on desktop setups?</span>
-                        <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="px-6 pb-6 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content pt-2 border-t border-white/[0.02] bg-zinc-950/20">
-                        Desktop layout trees contain conditional rendering nodes that restrict profile navigation tabs exclusively to video items, likes, or collection clusters. This runtime application layer monitors parent container layouts and updates the CSS hidden declarations programmatically to bring the tab into interaction visibility with no proxy dependency.
-                    </div>
-                </div>
-
-                <!-- Accordion Frame 2 -->
-                <div class="glass-card rounded-2xl border-white/5 overflow-hidden transition-all duration-300">
-                    <button class="w-full p-6 text-left font-bold text-white flex items-center justify-between text-sm sm:text-base faq-trigger hover:bg-white/[0.02] transition-colors" onclick="toggleFaqPanel(this)">
-                        <span>How does the scheduling engine balance bulk clearing blocks against rate-limiting mechanisms?</span>
-                        <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="px-6 pb-6 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content pt-2 border-t border-white/[0.02] bg-zinc-950/20">
-                        The architecture schedules mutations inside standard asynchronously managed loops. Rather than deploying absolute execution timers, it injects pseudorandom mathematical distributions onto each element clearing process cycle. Paired with structural sleep checkpoints every few loops, the resulting interaction footprint resembles manual browser usage perfectly.
-                    </div>
-                </div>
-
-                <!-- Accordion Frame 3 -->
-                <div class="glass-card rounded-2xl border-white/5 overflow-hidden transition-all duration-300">
-                    <button class="w-full p-6 text-left font-bold text-white flex items-center justify-between text-sm sm:text-base faq-trigger hover:bg-white/[0.02] transition-colors" onclick="toggleFaqPanel(this)">
-                        <span>Does the script engine process alternative grid items like slideshow media properly?</span>
-                        <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    <div class="px-6 pb-6 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content pt-2 border-t border-white/[0.02] bg-zinc-950/20">
-                        Yes. The code contains distinct structural validation checks. If the pipeline encounters standard multi-image components (indicated by specialized container wrappers or swiper buttons), it logs an information flag, skips processing actions on that resource item, and increments your skipped metrics array before advancing layout columns.
+                <div class="glass-card rounded-xl p-4 space-y-1">
+                    <div class="font-bold text-white">Why can't I see my Reposts tab on desktop?</div>
+                    <div class="text-zinc-400 leading-relaxed">
+                        TikTok hides the tab by default on computers. Click the script's "Unhide Reposts Tab" button and it pops right back up.
                     </div>
                 </div>
             </div>
@@ -627,207 +319,78 @@
 
     </main>
 
-    <!-- Global Layout Footer -->
-    <footer class="relative z-10 border-t border-white/5 bg-[#07070a]/90 backdrop-blur-xl py-14 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-zinc-500 font-mono">
-            <div class="flex items-center gap-3">
-                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-red to-rose-600 flex items-center justify-center font-black text-white text-[10px] shadow-md shadow-brand-red/10">
-                    TR
-                </div>
-                <span>Automated Cleanup Tool Core • Maintained by <strong class="text-zinc-300 font-sans">@getsentrix</strong></span>
-            </div>
-
-            <div class="flex items-center flex-wrap justify-center gap-6">
-                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-300 transition-colors">GitHub Repository</a>
-                <a href="https://greasyfork.org" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-300 transition-colors">GreasyFork Mirror</a>
-                <span class="text-zinc-800">|</span>
-                <span>Relay Server: <strong class="text-brand-cyan font-semibold">@dprits2</strong></span>
-            </div>
-        </div>
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-white/10 py-8 px-4 text-center text-xs text-zinc-500 space-y-2">
+        <p>TikTok Auto Unrepost Bot • Maintained by <a href="https://github.com/getsentrix" target="_blank" rel="noreferrer" class="text-zinc-300 hover:text-white underline">@getsentrix</a></p>
+        <p class="flex items-center justify-center gap-4">
+            <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="hover:text-zinc-300">GitHub</a>
+            <span>•</span>
+            <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" target="_blank" rel="noreferrer" class="hover:text-zinc-300">GreasyFork</a>
+            <span>•</span>
+            <span>Discord: <span class="font-mono text-zinc-400">@dprits2</span></span>
+        </p>
     </footer>
 
-    <!-- Interactive Execution Script Automation Code Logic -->
+    <!-- Simple Interactive Demo Script -->
     <script>
-        // Lab Simulator State Variables
-        let activeLoopState = false;
-        let automationTimerRef = null;
-        let counterRemovedSession = 0;
-        let counterSkippedSession = 0;
-        let counterGlobalLifetime = 1248;
-        let activeMockPostPointer = 0;
+        let isRunning = false;
+        let timer = null;
+        let count = 0;
+        let total = 1420;
 
-        // Structured Mock Content Payload Array
-        const mockDatabaseFeed = [
-            { author: '@creativetrends', id: '738192847291823', caption: 'Viral Transition Trend compilation #fyp #viral #trending', type: '📹 Video Media', reposted: true },
-            { author: '@technewsdaily', id: '739281928471029', caption: 'Next generation processor architectural leak revealed! 💻', type: '📹 Video Media', reposted: true },
-            { author: '@artgallery', id: '740192847192847', caption: 'Procreate abstract speedpainting process set (12 files)', type: '🖼️ Photo Carousel', reposted: true },
-            { author: '@comedyvibes', id: '741928471928471', caption: 'When you compile production changes directly on remote servers', type: '📹 Video Media', reposted: false },
-            { author: '@lofifrequencies', id: '742918274918274', caption: 'Chill ambient soundscapes for isolated optimization workflows 🎧', type: '📹 Video Media', reposted: true }
-        ];
+        const terminal = document.getElementById('sim-terminal');
+        const toggleBtn = document.getElementById('sim-toggle');
+        const currentEl = document.getElementById('sim-current');
+        const totalEl = document.getElementById('sim-total');
 
-        // Format and append diagnostic console arrays
-        function pushDiagnosticLog(messageString, messageColorHex = '#8e8e93') {
-            const outputTerminalNode = document.getElementById('sim-console');
-            if (!outputTerminalNode) return;
-            
-            const timestampString = new Date().toLocaleTimeString([], { hour12: false });
-            const singleLineWrapper = document.createElement('div');
-            singleLineWrapper.className = 'transition-all duration-200 animate-[fadeIn_0.2s_ease-out]';
-            singleLineWrapper.style.color = messageColorHex;
-            singleLineWrapper.innerHTML = `<span class="text-zinc-600 select-none">[${timestampString}]</span> ${messageString}`;
-            
-            outputTerminalNode.appendChild(singleLineWrapper);
-            outputTerminalNode.scrollTop = outputTerminalNode.scrollHeight;
+        function appendLog(text, color = '#a1a1aa') {
+            const time = new Date().toLocaleTimeString([], { hour12: false });
+            const line = document.createElement('div');
+            line.style.color = color;
+            line.textContent = `[${time}] ${text}`;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
         }
 
-        // Render dynamic screen notification alerts
-        function triggerScreenToastAlert() {
-            const targetToastNode = document.getElementById('sim-toast');
-            targetToastNode.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
-            targetToastNode.classList.add('opacity-100', 'translate-y-0');
-            
+        function runStep() {
+            if (!isRunning) return;
+            appendLog('Found reposted video. Clicking remove...');
             setTimeout(() => {
-                targetToastNode.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
-                targetToastNode.classList.remove('opacity-100', 'translate-y-0');
-            }, 1500);
+                if (!isRunning) return;
+                count++;
+                total++;
+                currentEl.textContent = count;
+                totalEl.textContent = total.toLocaleString();
+                appendLog(`Successfully removed repost #${total}!`, '#2ed573');
+
+                setTimeout(() => {
+                    if (!isRunning) return;
+                    appendLog('Scrolling down to next post...');
+                    timer = setTimeout(runStep, 1000);
+                }, 800);
+            }, 600);
         }
 
-        // Render targeted items inside active simulation nodes
-        function refreshMockViewDOM() {
-            const dynamicRecordItem = mockDatabaseFeed[activeMockPostPointer % mockDatabaseFeed.length];
-            
-            document.getElementById('sim-author').textContent = dynamicRecordItem.author;
-            document.getElementById('sim-post-id').textContent = `UID: ${dynamicRecordItem.id}`;
-            document.getElementById('sim-caption').textContent = dynamicRecordItem.caption;
-            document.getElementById('sim-media-type').textContent = dynamicRecordItem.type;
-            document.getElementById('sim-avatar').textContent = dynamicRecordItem.author.slice(1, 3).toUpperCase();
-            
-            const repostIndicatorTextNode = document.getElementById('sim-reposted-by');
-            if (dynamicRecordItem.reposted) {
-                repostIndicatorTextNode.textContent = 'You reposted this item';
-                repostIndicatorTextNode.parentElement.className = 'flex items-center gap-2 mt-2 bg-brand-red/10 px-3 py-1 rounded-full border border-brand-red/20';
+        toggleBtn.addEventListener('click', () => {
+            isRunning = !isRunning;
+            if (isRunning) {
+                toggleBtn.textContent = 'Stop Auto-Unrepost';
+                toggleBtn.classList.remove('bg-white', 'text-black');
+                toggleBtn.classList.add('bg-brand-accent', 'text-white', 'demo-running');
+                appendLog('Bot started.', '#2ed573');
+                runStep();
             } else {
-                repostIndicatorTextNode.textContent = 'Action Complete: Cleaned';
-                repostIndicatorTextNode.parentElement.className = 'flex items-center gap-2 mt-2 bg-zinc-800 px-3 py-1 rounded-full border border-zinc-700 text-zinc-400';
-            }
-            
-            document.getElementById('sim-feed-status').textContent = `Pipeline State: Active (Post index ${activeMockPostPointer + 1}/80)`;
-        }
-
-        // Manage tab configurations window toggle layout state
-        function toggleConfigTab() {
-            const interfaceTabContainer = document.getElementById('sim-config-tab');
-            interfaceTabContainer.classList.toggle('hidden');
-        }
-
-        // Execution process flow loop logic orchestrations
-        function processPipelineDaemonTick() {
-            if (!activeLoopState) return;
-            
-            const targetedIterationObject = mockDatabaseFeed[activeMockPostPointer % mockDatabaseFeed.length];
-            pushDiagnosticLog(`Polling element selectors for Node ID: ${targetedIterationObject.id}...`);
-
-            // Evaluate conditional settings state values
-            const settingBypassSlideshowStatus = document.getElementById('cfg-skip-slides').checked;
-            
-            automationTimerRef = setTimeout(() => {
-                if (!activeLoopState) return;
-
-                // Handle structural slides validation triggers
-                if (targetedIterationObject.type === '🖼️ Photo Carousel' && settingBypassSlideshowStatus) {
-                    counterSkippedSession++;
-                    document.getElementById('sim-stat-skipped').textContent = counterSkippedSession;
-                    pushDiagnosticLog(`[SKIP] Carousel tokens matched target criteria. Advancing layout pointers.`, '#f5a623');
-                    
-                    activeMockPostPointer++;
-                    refreshMockViewDOM();
-                    setTimeout(processPipelineDaemonTick, 1000);
-                    return;
-                }
-
-                if (targetedIterationObject.reposted) {
-                    pushDiagnosticLog(`[ACTION] Target node matched validation criteria. Deserializing click events...`, '#00f2fe');
-                    
-                    setTimeout(() => {
-                        if (!activeLoopState) return;
-                        
-                        triggerScreenToastAlert();
-                        counterRemovedSession++;
-                        counterGlobalLifetime++;
-                        
-                        document.getElementById('sim-stat-current').textContent = counterRemovedSession;
-                        document.getElementById('sim-stat-total').textContent = counterGlobalLifetime.toLocaleString();
-                        
-                        pushDiagnosticLog(`[SUCCESS] Mutated structural DOM state tree safely. Counter updated.`, '#2ed573');
-                        targetedIterationObject.reposted = false;
-
-                        // Layout scrolling viewport animation simulation offset delay timers
-                        setTimeout(() => {
-                            if (!activeLoopState) return;
-                            pushDiagnosticLog('Simulating window dispatch vertical scroll event down...');
-                            activeMockPostPointer++;
-                            refreshMockViewDOM();
-                            processPipelineDaemonTick();
-                        }, 1400);
-                    }, 900);
-                } else {
-                    pushDiagnosticLog(`[SKIPPED] Node state already verified as cleaned. Incrementing context pointer.`, '#747480');
-                    activeMockPostPointer++;
-                    refreshMockViewDOM();
-                    setTimeout(processPipelineDaemonTick, 1000);
-                }
-            }, 1400);
-        }
-
-        // Operational management event registration binds
-        document.getElementById('sim-toggle-btn').addEventListener('click', function() {
-            activeLoopState = !activeLoopState;
-            const contextActionTriggerButton = this;
-
-            if (activeLoopState) {
-                contextActionTriggerButton.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg> <span>Halt Automation Daemon</span>`;
-                contextActionTriggerButton.className = 'w-full bg-brand-accent hover:bg-red-600 text-white font-bold text-xs py-3 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 sim-pulse-active';
-                pushDiagnosticLog('Deconstructing environment states... Attaching runtime framework listeners.', '#2ed573');
-                processPipelineDaemonTick();
-            } else {
-                contextActionTriggerButton.innerHTML = `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5v14l11-7z"/></svg> <span>Initialize Automation Daemon</span>`;
-                contextActionTriggerButton.className = 'w-full bg-white hover:bg-zinc-200 text-black font-bold text-xs py-3 rounded-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2';
-                pushDiagnosticLog('Received structural interrupt. Safely halting execution pipeline arrays.', '#ff4757');
-                clearTimeout(automationTimerRef);
+                toggleBtn.textContent = 'Start Auto-Unrepost';
+                toggleBtn.classList.remove('bg-brand-accent', 'text-white', 'demo-running');
+                toggleBtn.classList.add('bg-white', 'text-black');
+                appendLog('Bot stopped.', '#f5a623');
+                clearTimeout(timer);
             }
         });
 
-        document.getElementById('sim-manual-next').addEventListener('click', () => {
-            activeMockPostPointer++;
-            refreshMockViewDOM();
-            pushDiagnosticLog('Dispatched custom navigation action sequence manually.');
+        document.getElementById('sim-unhide').addEventListener('click', () => {
+            appendLog('Unhid the Reposts tab on your profile.', '#2ed573');
         });
-
-        document.getElementById('sim-unhide-btn').addEventListener('click', () => {
-            pushDiagnosticLog('Dispatched inline layout force override event: Mutated tab components.', '#00f2fe');
-        });
-
-        document.getElementById('sim-btn-help').addEventListener('click', () => {
-            pushDiagnosticLog('Guidance: Retain window priority focus on real deployments for consistent DOM querying cycles.', '#purple-400');
-        });
-
-        // FAQ interactive toggle execution callback block
-        function toggleFaqPanel(clickedButtonElement) {
-            const intendedTargetContentBlock = clickedButtonElement.nextElementSibling;
-            const trackingVectorArrowIcon = clickedButtonElement.querySelector('svg');
-            const contextualVisibilityStatus = !intendedTargetContentBlock.classList.contains('hidden');
-
-            document.querySelectorAll('.faq-content').forEach(elementItem => elementItem.classList.add('hidden'));
-            document.querySelectorAll('.faq-trigger svg').forEach(elementArrow => elementArrow.classList.remove('rotate-180'));
-
-            if (!contextualVisibilityStatus) {
-                intendedTargetContentBlock.classList.remove('hidden');
-                trackingVectorArrowIcon.classList.add('rotate-180');
-            }
-        }
-
-        // Initialize active profile parameters down baseline stack maps
-        refreshMockViewDOM();
     </script>
 </body>
 </html>
