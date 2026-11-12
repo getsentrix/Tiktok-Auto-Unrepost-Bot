@@ -1,38 +1,33 @@
-<!-- index.html — TikTok Auto Unrepost Bot Showcase -->
+<!-- index.html — TikTok Auto Unrepost Bot -->
 <!-- language: html / css / javascript | runtime: browser | target: github pages -->
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Auto Unrepost Bot — Clean Your Reposts Free</title>
-    <meta name="description" content="A simple, free browser script that removes all your TikTok reposts on autopilot. Safe delays, skips photo slideshows, and no passwords required.">
-    <meta name="theme-color" content="#09090b">
+    <title>TikTok Auto Unrepost Bot — Bulk Remove Reposts</title>
+    <meta name="description" content="A lightweight, open-source browser script that removes your TikTok reposts on autopilot. Randomized delays, slideshow detection, and zero passwords required.">
+    <meta name="theme-color" content="#0A0A0A">
 
-    <!-- Fonts: Plus Jakarta Sans & JetBrains Mono (from Figma Free Fonts reference) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-    <!-- Tailwind CDN for GitHub Pages -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
                         mono: ['"JetBrains Mono"', 'monospace'],
                     },
                     colors: {
-                        brand: {
-                            red: '#ff3b5c',
-                            accent: '#ff4757',
-                            dark: '#09090b',
-                            card: '#121215',
-                            border: 'rgba(255, 255, 255, 0.08)'
-                        }
+                        canvas: '#0A0A0A',
+                        surface: '#111111',
+                        elevated: '#171717',
+                        hairline: '#222222',
+                        accent: '#FF2C55',
                     }
                 }
             }
@@ -41,309 +36,291 @@
 
     <style>
         body {
-            background-color: #09090b;
-            color: #ececec;
-            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-            overflow-x: hidden;
+            background-color: #0A0A0A;
+            color: #EDEDED;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         ::selection {
-            background: #ff3b5c;
-            color: #ffffff;
+            background: #FF2C55;
+            color: #FFFFFF;
         }
 
-        /* Ambient Glow Backdrop (from gradients resource) */
-        .ambient-bg {
-            position: fixed;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100vw;
-            max-width: 1400px;
-            height: 700px;
-            background: url('assets/bg.jpg') no-repeat top center;
-            background-size: cover;
-            opacity: 0.28;
-            filter: blur(40px);
-            pointer-events-none;
-            z-index: 0;
+        .tabular {
+            font-variant-numeric: tabular-nums;
         }
 
-        .ambient-mesh {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at 50% 18%, rgba(255, 59, 92, 0.12) 0%, transparent 60%);
-            pointer-events-none;
-            z-index: 0;
-        }
-
-        /* Glass Cards */
-        .glass-card {
-            background: rgba(18, 18, 22, 0.75);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .glass-card-hover {
-            transition: all 0.25s ease;
-        }
-        .glass-card-hover:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 255, 255, 0.16);
-        }
-
-        /* Pulse for Running Demo */
-        @keyframes demoPulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.5); }
-            70% { box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
-        }
-        .demo-running {
-            animation: demoPulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
-        }
-
-        /* Custom Scrollbar for Terminal */
-        .terminal-scroll::-webkit-scrollbar {
+        /* Minimalist terminal scrollbar */
+        .log-scroll::-webkit-scrollbar {
             width: 4px;
         }
-        .terminal-scroll::-webkit-scrollbar-thumb {
-            background: #27272a;
-            border-radius: 4px;
+        .log-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .log-scroll::-webkit-scrollbar-thumb {
+            background: #2A2A2A;
+            border-radius: 2px;
+        }
+
+        /* Clean native accordion indicator */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary .plus-icon {
+            transform: rotate(45deg);
         }
     </style>
 </head>
-<body class="relative min-h-screen">
+<body class="min-h-screen flex flex-col">
 
-    <!-- Ambient Glow from Resources -->
-    <div class="ambient-bg"></div>
-    <div class="ambient-mesh"></div>
-
-    <!-- Navigation -->
-    <header class="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 pt-6">
-        <nav class="glass-card rounded-2xl px-5 py-3 flex items-center justify-between">
-            <a href="#" class="flex items-center gap-2.5">
-                <div class="w-8 h-8 rounded-lg bg-brand-red flex items-center justify-center font-bold text-white text-xs">
-                    TUR
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="font-bold text-white text-sm tracking-tight">TikTok Unrepost Bot</span>
-                    <span class="bg-white/10 text-zinc-300 text-[11px] font-mono px-2 py-0.5 rounded-full">v11.8</span>
-                </div>
+    <!-- Top Navigation -->
+    <header class="border-b border-hairline bg-canvas sticky top-0 z-30">
+        <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <span class="w-2.5 h-2.5 bg-accent inline-block"></span>
+                <span class="font-semibold text-sm tracking-tight text-white">TikTok Unrepost Bot</span>
+                <span class="text-xs font-mono text-neutral-500">v11.8</span>
             </a>
 
-            <div class="flex items-center gap-3">
-                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="p-2 text-zinc-400 hover:text-white rounded-lg transition-colors" title="GitHub">
-                    <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                    </svg>
+            <div class="flex items-center gap-5">
+                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="text-xs font-medium text-neutral-400 hover:text-white transition-colors">
+                    Source
                 </a>
-                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-semibold text-xs transition-colors">
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-3.5 py-1.5 bg-white hover:bg-neutral-200 text-black font-medium text-xs rounded-md transition-colors">
                     Install Script
                 </a>
             </div>
-        </nav>
+        </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-20 space-y-24">
+    <!-- Main Content -->
+    <main class="flex-1 max-w-3xl w-full mx-auto px-6">
 
-        <!-- Hero Section (Clear, bold, zero fluff) -->
-        <section class="text-center space-y-6">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full glass-card text-xs font-mono text-zinc-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span>Free & Open Source</span>
-                <span class="text-zinc-600">•</span>
-                <span>No Passwords Needed</span>
+        <!-- Hero Section -->
+        <section class="py-16 sm:py-24 space-y-6">
+            <div class="font-mono text-xs text-neutral-500 tracking-wide uppercase">
+                Userscript &bull; Free &amp; Open Source &bull; Local Session Only
             </div>
 
-            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
-                Clear all your TikTok reposts.<br>
-                <span class="text-brand-red">Without clicking every single one.</span>
+            <h1 class="text-3xl sm:text-5xl font-bold tracking-[-0.03em] text-white leading-[1.12]">
+                Remove every TikTok repost.<br>
+                <span class="text-neutral-500">Without clicking a single button.</span>
             </h1>
 
-            <p class="text-base sm:text-lg text-zinc-400 max-w-xl mx-auto leading-relaxed">
-                A lightweight browser script that automatically navigates through your reposts feed and removes them for you. Safe pauses, skips photo slideshows, and runs in the background.
+            <p class="text-sm sm:text-base text-neutral-400 max-w-xl leading-relaxed">
+                A lightweight browser script that steps through your TikTok reposts feed and clears them automatically. Built with randomized human pacing, slideshow detection, and zero external servers.
             </p>
 
-            <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
-                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-6 py-3 rounded-xl bg-brand-red hover:bg-rose-500 text-white font-bold text-sm transition-all shadow-lg shadow-brand-red/20">
-                    Install Script (Free)
+            <div class="pt-2 flex flex-wrap items-center gap-3">
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="px-5 py-2.5 bg-white hover:bg-neutral-200 text-black font-semibold text-xs sm:text-sm rounded-md transition-colors">
+                    Install via GreasyFork
                 </a>
-                <a href="#how-to-use" class="px-6 py-3 rounded-xl glass-card hover:bg-white/5 text-zinc-300 hover:text-white font-semibold text-sm transition-colors">
-                    How it works ↓
+                <a href="#setup" class="px-5 py-2.5 bg-surface hover:bg-elevated text-neutral-200 border border-hairline font-medium text-xs sm:text-sm rounded-md transition-colors">
+                    Setup Guide
+                </a>
+                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="px-4 py-2.5 text-xs sm:text-sm font-mono text-neutral-500 hover:text-neutral-300 transition-colors">
+                    GitHub &nearr;
                 </a>
             </div>
         </section>
 
-        <!-- Interactive Live Widget Preview (Direct, clean simulator) -->
-        <section class="space-y-4">
-            <div class="text-center space-y-1">
-                <p class="text-xs font-mono uppercase tracking-wider text-zinc-500">Interactive Preview</p>
-                <h2 class="text-xl font-bold text-white">This is what appears on your TikTok page</h2>
-                <p class="text-xs text-zinc-400">Click "Start Auto-Unrepost" below to watch the live simulation.</p>
-            </div>
-
-            <!-- Injected Panel Mockup -->
-            <div class="glass-card rounded-2xl p-6 max-w-md mx-auto shadow-2xl space-y-4 border border-white/10">
-                <!-- Panel Header -->
-                <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <!-- Interactive HUD Simulator -->
+        <section class="pb-20">
+            <div class="border border-hairline rounded-lg bg-surface overflow-hidden">
+                <!-- Simulated Browser Top Bar -->
+                <div class="px-4 py-2.5 border-b border-hairline bg-[#0D0D0D] flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-brand-red"></span>
-                        <span class="font-semibold text-xs text-white">Unrepost Bot v11.8.0</span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-neutral-800"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-neutral-800"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-neutral-800"></span>
+                        <span class="ml-2 font-mono text-[11px] text-neutral-500">tiktok.com/@profile &mdash; Reposts</span>
                     </div>
-                    <span class="text-[10px] font-mono text-zinc-500">DRAGGABLE WINDOW</span>
+                    <span class="font-mono text-[11px] text-neutral-500">LIVE PREVIEW</span>
                 </div>
 
-                <!-- Unhide Reposts Button -->
-                <button id="sim-unhide" class="w-full bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10 text-xs font-medium py-2 rounded-lg transition-colors">
-                    Unhide Reposts Tab
-                </button>
+                <!-- Simulator Stage -->
+                <div class="p-6 sm:p-10 bg-[#0C0C0C] flex flex-col items-center justify-center">
+                    <!-- Actual Script Overlay Panel -->
+                    <div class="w-full max-w-sm bg-surface border border-[#2A2A2A] rounded-lg p-4 space-y-3.5 shadow-2xl">
+                        <div class="flex items-center justify-between pb-2.5 border-b border-hairline">
+                            <div class="flex items-center gap-2">
+                                <span id="sim-indicator" class="w-2 h-2 rounded-full bg-neutral-600 transition-colors"></span>
+                                <span class="font-semibold text-xs text-white tracking-tight">Unrepost Bot v11.8.0</span>
+                            </div>
+                            <span class="font-mono text-[10px] text-neutral-500 uppercase">HUD Overlay</span>
+                        </div>
 
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-3 gap-2 text-center">
-                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
-                        <div class="text-[10px] text-zinc-500 uppercase font-mono">Current</div>
-                        <div class="text-base font-bold text-white font-mono mt-0.5" id="sim-current">0</div>
-                    </div>
-                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
-                        <div class="text-[10px] text-zinc-500 uppercase font-mono">Skipped</div>
-                        <div class="text-base font-bold text-zinc-400 font-mono mt-0.5" id="sim-skipped">0</div>
-                    </div>
-                    <div class="bg-black/50 border border-white/5 rounded-lg p-2">
-                        <div class="text-[10px] text-zinc-500 uppercase font-mono">All-Time</div>
-                        <div class="text-base font-bold text-emerald-400 font-mono mt-0.5" id="sim-total">1,420</div>
-                    </div>
-                </div>
+                        <button id="sim-unhide" class="w-full py-2 px-3 bg-elevated hover:bg-[#202020] border border-hairline text-neutral-200 text-xs font-medium rounded-md transition-colors flex items-center justify-between">
+                            <span>Unhide Reposts Tab</span>
+                            <span id="sim-unhide-badge" class="font-mono text-[10px] text-neutral-500">READY</span>
+                        </button>
 
-                <!-- Primary Action -->
-                <button id="sim-toggle" class="w-full bg-white hover:bg-zinc-200 text-black font-bold text-xs py-2.5 rounded-lg transition-all">
-                    Start Auto-Unrepost
-                </button>
+                        <div class="grid grid-cols-3 border border-hairline rounded-md divide-x divide-hairline bg-canvas">
+                            <div class="p-2.5 text-center">
+                                <div class="font-mono text-[10px] text-neutral-500 uppercase">Session</div>
+                                <div id="sim-current" class="font-mono text-sm font-semibold text-white tabular mt-0.5">0</div>
+                            </div>
+                            <div class="p-2.5 text-center">
+                                <div class="font-mono text-[10px] text-neutral-500 uppercase">Skipped</div>
+                                <div id="sim-skipped" class="font-mono text-sm font-semibold text-neutral-400 tabular mt-0.5">0</div>
+                            </div>
+                            <div class="p-2.5 text-center">
+                                <div class="font-mono text-[10px] text-neutral-500 uppercase">All-Time</div>
+                                <div id="sim-total" class="font-mono text-sm font-semibold text-white tabular mt-0.5">1,420</div>
+                            </div>
+                        </div>
 
-                <!-- Console Box -->
-                <div class="h-24 bg-black/60 border border-white/5 rounded-lg p-2.5 font-mono text-[11px] space-y-1 overflow-y-auto terminal-scroll text-zinc-400" id="sim-terminal">
-                    <div>[READY] Discord: @dprits2. Ready to unrepost.</div>
+                        <button id="sim-toggle" class="w-full py-2.5 bg-white hover:bg-neutral-200 text-black font-semibold text-xs rounded-md transition-colors">
+                            Start Auto-Unrepost
+                        </button>
+
+                        <div id="sim-terminal" class="h-24 bg-canvas border border-hairline rounded-md p-2.5 font-mono text-[11px] leading-relaxed overflow-y-auto log-scroll text-neutral-400 space-y-1">
+                            <div>[INIT] Ready. Click Start to test workflow.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 3 Highlights (No bullshit) -->
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
-                <div class="text-brand-red font-mono text-sm font-bold">01 / SAFE PAUSES</div>
-                <h3 class="font-bold text-white text-base">Takes breaks automatically</h3>
-                <p class="text-zinc-400 text-xs leading-relaxed">
-                    Takes a quick 10–15s pause every 15–25 posts so TikTok doesn't flag your account for acting too quickly.
+        <!-- Core Capabilities (Architectural Hairline Grid) -->
+        <section class="border-y border-hairline grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-hairline">
+            <div class="py-8 md:pr-6 space-y-2">
+                <div class="font-mono text-xs text-neutral-500">01</div>
+                <h2 class="font-semibold text-sm text-white">Randomized Pacing</h2>
+                <p class="text-xs text-neutral-400 leading-relaxed">
+                    Inserts a 10–15 second cooldown every 15–25 removals to mimic natural browsing and avoid rate limits.
                 </p>
             </div>
 
-            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
-                <div class="text-brand-red font-mono text-sm font-bold">02 / SLIDESHOW SAFE</div>
-                <h3 class="font-bold text-white text-base">Never gets stuck on photos</h3>
-                <p class="text-zinc-400 text-xs leading-relaxed">
-                    Knows the difference between horizontal photo slides and vertical feed posts. Scrolls down to the next video cleanly.
+            <div class="py-8 md:px-6 space-y-2">
+                <div class="font-mono text-xs text-neutral-500">02</div>
+                <h2 class="font-semibold text-sm text-white">Slideshow Detection</h2>
+                <p class="text-xs text-neutral-400 leading-relaxed">
+                    Distinguishes horizontal photo carousels from standard vertical videos so the feed never stalls mid-run.
                 </p>
             </div>
 
-            <div class="glass-card glass-card-hover rounded-xl p-5 space-y-2">
-                <div class="text-brand-red font-mono text-sm font-bold">03 / UNHIDE TAB</div>
-                <h3 class="font-bold text-white text-base">Fixes missing Reposts tab</h3>
-                <p class="text-zinc-400 text-xs leading-relaxed">
-                    TikTok hides the Reposts tab on desktop browsers. The built-in "Unhide Reposts Tab" button restores it in one click.
+            <div class="py-8 md:pl-6 space-y-2">
+                <div class="font-mono text-xs text-neutral-500">03</div>
+                <h2 class="font-semibold text-sm text-white">Tab Restoration</h2>
+                <p class="text-xs text-neutral-400 leading-relaxed">
+                    TikTok hides the Reposts tab on desktop web by default. One click unhides it directly in the DOM.
                 </p>
             </div>
         </section>
 
-        <!-- How To Use (3 Steps) -->
-        <section id="how-to-use" class="space-y-6">
-            <div class="text-center space-y-1">
-                <p class="text-xs font-mono uppercase tracking-wider text-zinc-500">Quick Setup</p>
-                <h2 class="text-2xl font-bold text-white">How to use it</h2>
+        <!-- Setup Steps -->
+        <section id="setup" class="py-20 space-y-8">
+            <div class="space-y-1">
+                <h2 class="text-lg font-semibold text-white tracking-tight">Setup</h2>
+                <p class="text-xs text-neutral-500">Runs in Chrome, Edge, Brave, or Firefox.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="glass-card rounded-xl p-5 space-y-3">
-                    <span class="text-xs font-mono bg-white/10 text-white px-2 py-0.5 rounded">Step 1</span>
-                    <h3 class="font-bold text-white text-sm">Install Tampermonkey</h3>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Add the free <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" class="text-brand-red underline hover:text-white">Tampermonkey</a> extension to Chrome, Firefox, Brave, or Edge.
-                    </p>
+            <div class="space-y-4">
+                <div class="flex items-start gap-4 pb-4 border-b border-hairline">
+                    <span class="font-mono text-xs text-neutral-500 pt-0.5">01</span>
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-medium text-white">Install a userscript manager</h3>
+                        <p class="text-xs text-neutral-400 leading-relaxed">
+                            Add <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" class="text-white underline underline-offset-4 hover:text-neutral-300">Tampermonkey</a> (or Violentmonkey) to your browser.
+                        </p>
+                    </div>
                 </div>
 
-                <div class="glass-card rounded-xl p-5 space-y-3 border-brand-red/30">
-                    <span class="text-xs font-mono bg-brand-red/20 text-brand-red px-2 py-0.5 rounded">Step 2</span>
-                    <h3 class="font-bold text-white text-sm">Add the script</h3>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Click <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="text-brand-red underline hover:text-white">Install Script</a> to add the script to your Tampermonkey extension.
-                    </p>
+                <div class="flex items-start gap-4 pb-4 border-b border-hairline">
+                    <span class="font-mono text-xs text-neutral-500 pt-0.5">02</span>
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-medium text-white">Install the bot script</h3>
+                        <p class="text-xs text-neutral-400 leading-relaxed">
+                            Open the <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="text-white underline underline-offset-4 hover:text-neutral-300">GreasyFork distribution link</a> and confirm installation in Tampermonkey.
+                        </p>
+                    </div>
                 </div>
 
-                <div class="glass-card rounded-xl p-5 space-y-3">
-                    <span class="text-xs font-mono bg-white/10 text-white px-2 py-0.5 rounded">Step 3</span>
-                    <h3 class="font-bold text-white text-sm">Open reposts & hit start</h3>
-                    <p class="text-zinc-400 text-xs leading-relaxed">
-                        Go to your TikTok profile, open your Reposts tab, click the first video, and press <strong class="text-white">Start Auto-Unrepost</strong>.
-                    </p>
+                <div class="flex items-start gap-4">
+                    <span class="font-mono text-xs text-neutral-500 pt-0.5">03</span>
+                    <div class="space-y-1">
+                        <h3 class="text-sm font-medium text-white">Open your Reposts and run</h3>
+                        <p class="text-xs text-neutral-400 leading-relaxed">
+                            Navigate to your TikTok profile, unhide or open the Reposts tab, click the first video, and press <span class="text-white font-medium">Start Auto-Unrepost</span>.
+                        </p>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- FAQ (Only 3 essential questions) -->
-        <section class="space-y-4 max-w-xl mx-auto">
-            <h2 class="text-xl font-bold text-white text-center">Frequently asked questions</h2>
+        <!-- FAQ Accordion -->
+        <section class="pb-20 space-y-6">
+            <h2 class="text-lg font-semibold text-white tracking-tight">Questions</h2>
 
-            <div class="space-y-2 text-xs">
-                <div class="glass-card rounded-xl p-4 space-y-1">
-                    <div class="font-bold text-white">Will this get my TikTok banned?</div>
-                    <div class="text-zinc-400 leading-relaxed">
-                        No accounts have been banned. The bot takes randomized pauses every 15–25 posts to keep behavior natural. For safety, clear 100–200 posts per day.
-                    </div>
-                </div>
+            <div class="border-t border-hairline divide-y divide-hairline">
+                <details class="group py-4" open>
+                    <summary class="flex items-center justify-between cursor-pointer text-sm font-medium text-white">
+                        <span>Is my account safe from bans?</span>
+                        <span class="plus-icon font-mono text-neutral-500 transition-transform duration-150">+</span>
+                    </summary>
+                    <p class="pt-2.5 text-xs text-neutral-400 leading-relaxed pr-6">
+                        Zero bans have been reported. The script randomizes click intervals and inserts 10–15 second breaks every 15–25 posts. For best results, cap sessions at 100–200 removals per day.
+                    </p>
+                </details>
 
-                <div class="glass-card rounded-xl p-4 space-y-1">
-                    <div class="font-bold text-white">Does it need my TikTok password?</div>
-                    <div class="text-zinc-400 leading-relaxed">
-                        Never. It runs completely inside your browser tab on your already logged-in session. It never asks for, sends, or touches your password.
-                    </div>
-                </div>
+                <details class="group py-4">
+                    <summary class="flex items-center justify-between cursor-pointer text-sm font-medium text-white">
+                        <span>Does it access my password or login tokens?</span>
+                        <span class="plus-icon font-mono text-neutral-500 transition-transform duration-150">+</span>
+                    </summary>
+                    <p class="pt-2.5 text-xs text-neutral-400 leading-relaxed pr-6">
+                        No. It executes locally inside your active browser tab using standard DOM interactions. No credentials, cookies, or session tokens are ever read or transmitted.
+                    </p>
+                </details>
 
-                <div class="glass-card rounded-xl p-4 space-y-1">
-                    <div class="font-bold text-white">Why can't I see my Reposts tab on desktop?</div>
-                    <div class="text-zinc-400 leading-relaxed">
-                        TikTok hides the tab by default on computers. Click the script's "Unhide Reposts Tab" button and it pops right back up.
-                    </div>
-                </div>
+                <details class="group py-4">
+                    <summary class="flex items-center justify-between cursor-pointer text-sm font-medium text-white">
+                        <span>Why is the Reposts tab missing on desktop?</span>
+                        <span class="plus-icon font-mono text-neutral-500 transition-transform duration-150">+</span>
+                    </summary>
+                    <p class="pt-2.5 text-xs text-neutral-400 leading-relaxed pr-6">
+                        TikTok hides the Reposts tab on desktop browsers by default. Use the <span class="text-neutral-200">Unhide Reposts Tab</span> button inside the floating panel to reveal it immediately.
+                    </p>
+                </details>
             </div>
         </section>
 
     </main>
 
-    <!-- Footer -->
-    <footer class="relative z-10 border-t border-white/10 py-8 px-4 text-center text-xs text-zinc-500 space-y-2">
-        <p>TikTok Auto Unrepost Bot • Maintained by <a href="https://github.com/getsentrix" target="_blank" rel="noreferrer" class="text-zinc-300 hover:text-white underline">@getsentrix</a></p>
-        <p class="flex items-center justify-center gap-4">
-            <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="hover:text-zinc-300">GitHub</a>
-            <span>•</span>
-            <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" target="_blank" rel="noreferrer" class="hover:text-zinc-300">GreasyFork</a>
-            <span>•</span>
-            <span>Discord: <span class="font-mono text-zinc-400">@dprits2</span></span>
-        </p>
+    <!-- Minimal Footer -->
+    <footer class="border-t border-hairline py-8">
+        <div class="max-w-3xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
+            <div>
+                Maintained by <a href="https://github.com/getsentrix" target="_blank" rel="noreferrer" class="text-neutral-300 hover:text-white transition-colors">@getsentrix</a>
+            </div>
+            <div class="flex items-center gap-5 font-mono text-[11px]">
+                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">GitHub</a>
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">GreasyFork</a>
+                <span>Discord: @dprits2</span>
+            </div>
+        </div>
     </footer>
 
-    <!-- Simple Interactive Demo Script -->
+    <!-- Interactive Widget Simulation -->
     <script>
         let isRunning = false;
         let timer = null;
-        let count = 0;
-        let total = 1420;
+        let sessionCount = 0;
+        let skippedCount = 0;
+        let totalCount = 1420;
 
         const terminal = document.getElementById('sim-terminal');
         const toggleBtn = document.getElementById('sim-toggle');
+        const indicator = document.getElementById('sim-indicator');
         const currentEl = document.getElementById('sim-current');
+        const skippedEl = document.getElementById('sim-skipped');
         const totalEl = document.getElementById('sim-total');
 
-        function appendLog(text, color = '#a1a1aa') {
+        function appendLog(text, color = '#A3A3A3') {
             const time = new Date().toLocaleTimeString([], { hour12: false });
             const line = document.createElement('div');
             line.style.color = color;
@@ -354,20 +331,38 @@
 
         function runStep() {
             if (!isRunning) return;
-            appendLog('Found reposted video. Clicking remove...');
-            setTimeout(() => {
-                if (!isRunning) return;
-                count++;
-                total++;
-                currentEl.textContent = count;
-                totalEl.textContent = total.toLocaleString();
-                appendLog(`Successfully removed repost #${total}!`, '#2ed573');
 
-                setTimeout(() => {
+            // Simulate occasional slideshow skip every 4th action
+            const isSlideshow = (sessionCount + skippedCount + 1) % 4 === 0;
+
+            if (isSlideshow) {
+                appendLog('Photo slideshow detected — skipping...', '#FBBF24');
+                timer = setTimeout(() => {
                     if (!isRunning) return;
-                    appendLog('Scrolling down to next post...');
-                    timer = setTimeout(runStep, 1000);
-                }, 800);
+                    skippedCount++;
+                    skippedEl.textContent = skippedCount;
+                    appendLog('Scrolled past slideshow.', '#A3A3A3');
+                    timer = setTimeout(runStep, 850);
+                }, 600);
+                return;
+            }
+
+            appendLog('Repost located. Removing...');
+            timer = setTimeout(() => {
+                if (!isRunning) return;
+                sessionCount++;
+                totalCount++;
+                currentEl.textContent = sessionCount;
+                totalEl.textContent = totalCount.toLocaleString();
+                appendLog(`Removed repost #${totalCount.toLocaleString()}.`, '#4ADE80');
+
+                // Simulate safety pause every 5 removals in preview
+                if (sessionCount % 5 === 0) {
+                    appendLog('Safety pause (2s) to mimic human pacing...', '#A3A3A3');
+                    timer = setTimeout(runStep, 2000);
+                } else {
+                    timer = setTimeout(runStep, 900);
+                }
             }, 600);
         }
 
@@ -375,21 +370,29 @@
             isRunning = !isRunning;
             if (isRunning) {
                 toggleBtn.textContent = 'Stop Auto-Unrepost';
-                toggleBtn.classList.remove('bg-white', 'text-black');
-                toggleBtn.classList.add('bg-brand-accent', 'text-white', 'demo-running');
-                appendLog('Bot started.', '#2ed573');
+                toggleBtn.classList.remove('bg-white', 'hover:bg-neutral-200', 'text-black');
+                toggleBtn.classList.add('bg-accent', 'hover:opacity-90', 'text-white');
+                indicator.classList.remove('bg-neutral-600');
+                indicator.classList.add('bg-accent');
+                appendLog('Session started.', '#4ADE80');
                 runStep();
             } else {
                 toggleBtn.textContent = 'Start Auto-Unrepost';
-                toggleBtn.classList.remove('bg-brand-accent', 'text-white', 'demo-running');
-                toggleBtn.classList.add('bg-white', 'text-black');
-                appendLog('Bot stopped.', '#f5a623');
+                toggleBtn.classList.remove('bg-accent', 'hover:opacity-90', 'text-white');
+                toggleBtn.classList.add('bg-white', 'hover:bg-neutral-200', 'text-black');
+                indicator.classList.remove('bg-accent');
+                indicator.classList.add('bg-neutral-600');
+                appendLog('Session paused by user.', '#FBBF24');
                 clearTimeout(timer);
             }
         });
 
         document.getElementById('sim-unhide').addEventListener('click', () => {
-            appendLog('Unhid the Reposts tab on your profile.', '#2ed573');
+            const badge = document.getElementById('sim-unhide-badge');
+            badge.textContent = 'VISIBLE';
+            badge.classList.remove('text-neutral-500');
+            badge.classList.add('text-emerald-400');
+            appendLog('Injected style override: Reposts tab visible.', '#4ADE80');
         });
     </script>
 </body>
