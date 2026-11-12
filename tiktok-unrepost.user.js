@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TikTok Unrepost Bot Stable
 // @namespace    http://tampermonkey.net/
-// @version      11.7.3
+// @version      11.8.0
 // @description  TikTok unrepost script that actually works.
 // @match        https://www.tiktok.com/*
 // @grant        none
@@ -13,11 +13,16 @@
 (function () {
     'use strict';
 
-    // --- HELPER FUNCTIONS ---
+    // helper functions
     const delay = ms => new Promise(res => setTimeout(res, ms));
     const randomDelay = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
-    // Guaranteed execution of .click() with protected pointer/mouse simulation
+    function safeParseCount(rawVal) {
+        const parsed = parseInt(rawVal || '0', 10);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    }
+
+    // guarenteed click
     function safeClick(element) {
         if (!element) return;
         try {
@@ -42,7 +47,60 @@
         } catch (_) {}
     }
 
-    // Exact label matching + word-tokenized keyword match (preserves Unicode e.g. Polish usuń)
+    // hover simulation for ui
+    function safeHover(element) {
+        if (!element) return;
+        try {
+            const rect = (typeof element.getBoundingClientRect === 'function')
+                ? element.getBoundingClientRect()
+                : { left: 0, top: 0, width: 0, height: 0 };
+            const clientX = rect.left + rect.width / 2 + (Math.random() * 4 - 2);
+            const clientY = rect.top + rect.height / 2 + (Math.random() * 4 - 2);
+            const hoverOpts = {
+                bubbles: true, cancelable: true, view: window,
+                clientX, clientY, pointerType: 'mouse', isPrimary: true
+            };
+
+            const targets = [element];
+            if (element.parentElement && element.parentElement !== document.body) {
+                targets.unshift(element.parentElement);
+            }
+
+            for (const t of targets) {
+                try { t.dispatchEvent(new PointerEvent('pointerover', hoverOpts)); } catch (_) {}
+                try { t.dispatchEvent(new PointerEvent('pointerenter', { ...hoverOpts, bubbles: false })); } catch (_) {}
+                try { t.dispatchEvent(new MouseEvent('mouseover', hoverOpts)); } catch (_) {}
+                try { t.dispatchEvent(new MouseEvent('mouseenter', { ...hoverOpts, bubbles: false })); } catch (_) {}
+            }
+            try { element.dispatchEvent(new PointerEvent('pointermove', hoverOpts)); } catch (_) {}
+            try { element.dispatchEvent(new MouseEvent('mousemove', hoverOpts)); } catch (_) {}
+            try { element.dispatchEvent(new FocusEvent('focusin', { bubbles: true, view: window })); } catch (_) {}
+        } catch (_) {}
+    }
+
+    // unhover cleanup
+    function safeUnhover(element) {
+        if (!element) return;
+        try {
+            const leaveOpts = {
+                bubbles: true, cancelable: true, view: window,
+                clientX: 0, clientY: 0, pointerType: 'mouse', isPrimary: true
+            };
+            const targets = [element];
+            if (element.parentElement && element.parentElement !== document.body) {
+                targets.push(element.parentElement);
+            }
+            for (const t of targets) {
+                try { t.dispatchEvent(new PointerEvent('pointerout', leaveOpts)); } catch (_) {}
+                try { t.dispatchEvent(new PointerEvent('pointerleave', { ...leaveOpts, bubbles: false })); } catch (_) {}
+                try { t.dispatchEvent(new MouseEvent('mouseout', leaveOpts)); } catch (_) {}
+                try { t.dispatchEvent(new MouseEvent('mouseleave', { ...leaveOpts, bubbles: false })); } catch (_) {}
+            }
+            try { element.dispatchEvent(new FocusEvent('focusout', { bubbles: true, view: window })); } catch (_) {}
+        } catch (_) {}
+    }
+
+    // label / keyword match
     function isRemoveRepostLabel(rawText) {
         if (!rawText) return false;
         const text = rawText.toLowerCase().trim();
@@ -52,28 +110,59 @@
             'eliminar republicación', 'remover republicação', 'remover repost', 'repost remover',
             'repost entfernen', 'entfernen repost', 'rimuovi ripubblicazione', 'rimuovi repost',
             'usuń repost', 'repost usuń', 'repost sil', 'sil repost', 'repost verwijderen',
-            'repost fjerne', 'ta bort repost', 'repost löschen'
+            'repost fjerne', 'ta bort repost', 'repost löschen',
+            'удалить репост', 'отменить репост', 'убрать репост'
         ];
         if (validLabels.some(label => text.includes(label))) return true;
 
         const words = text.split(/[\s,.'"\-]+/);
         const removalKeywords = [
             'remove', 'eliminar', 'supprimer', 'remover', 'entfernen',
-            'löschen', 'rimuovi', 'usuń', 'sil', 'verwijderen', 'fjerne'
+            'löschen', 'rimuovi', 'usuń', 'sil', 'verwijderen', 'fjerne',
+            'удалить', 'отменить', 'убрать'
         ];
-        const repostKeywords = ['repost', 'republication', 'republicación', 'republicação', 'ripubblicazione'];
+        const repostKeywords = [
+            'repost', 'republication', 'republicación', 'republicação', 'ripubblicazione',
+            'репост'
+        ];
         return repostKeywords.some(rk => words.includes(rk)) && removalKeywords.some(kw => words.includes(kw));
     }
 
-    function getActiveElement(selector) {
+    // confirming a removed repost
+    function hasUnrepostToast() {
+        const toastCandidates = document.querySelectorAll(
+            '[role="status"], [role="alert"], [data-e2e*="toast" i], [class*="Toast" i], [class*="TUXToast" i]'
+        );
+        const toastPhrases = [
+            'repost removed', 'removed repost', 'repost eliminado', 'republication supprimée',
+            'republicação removida', 'repost entfernt', 'repost rimosso', 'usunięto repost',
+            'repost kaldırıldı', 'репост удален', 'репост удалён'
+        ];
+        for (const el of toastCandidates) {
+            const t = (el.textContent || '').toLowerCase().trim();
+            if (t && toastPhrases.some(phrase => t.includes(phrase))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getActiveElement(selector, filterFn = null) {
         const elements = document.querySelectorAll(selector);
         const screenCenter = window.innerHeight / 2;
         let closestEl = null;
         let minDistance = Infinity;
 
         for (const el of elements) {
+            if (el.closest('#tur-panel')) continue;
+            if (filterFn && !filterFn(el)) continue;
+
             const rect = el.getBoundingClientRect();
             if (rect.height > 0 && rect.width > 0) {
+                const style = window.getComputedStyle(el);
+                if (style.visibility === 'hidden' || style.display === 'none' || parseFloat(style.opacity) === 0) {
+                    continue;
+                }
                 const centerY = rect.top + (rect.height / 2);
                 const dist = Math.abs(centerY - screenCenter);
                 if (dist < minDistance && rect.bottom > 0 && rect.top < window.innerHeight) {
@@ -85,7 +174,7 @@
         return closestEl;
     }
 
-    // Dynamic polling helper to replace fragile fixed timeouts on lazy-loaded UI
+    // variable timeout
     async function waitForElement(getterFn, timeoutMs = 1800, intervalMs = 60) {
         const start = performance.now();
         while (performance.now() - start < timeoutMs) {
@@ -97,35 +186,91 @@
         return null;
     }
 
-    // Captures a unique fingerprint of the currently active post (handles both Video & Photo Mode)
+    // distinguish photo carousel and regular video right button
+    function isPhotoCarouselButton(el) {
+        if (!el) return false;
+        if (el.closest(
+            '[data-e2e="photo-mode-container"], [data-e2e="browse-photo"], ' +
+            '[class*="PhotoMode" i], [class*="Swiper" i], [class*="Carousel" i], [class*="ImageSwiper" i]'
+        )) {
+            return true;
+        }
+        const label = (el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+        if (/\b(photo|slide|image|picture)\b/.test(label)) {
+            return true;
+        }
+        const e2e = (el.getAttribute('data-e2e') || '').toLowerCase();
+        if (e2e.includes('photo') || e2e.includes('carousel') || e2e.includes('swiper')) {
+            return true;
+        }
+        return false;
+    }
+
+    // identify photo/vid from post id
+    function extractPostIdFromUrl(urlStr) {
+        const match = urlStr.match(/\/(?:video|photo)\/(\d+)/);
+        return match ? match[1] : '';
+    }
+
+    // better logic for photo/video
     function getCurrentPostSignature() {
         const url = window.location.href;
-        const activeVid = getActiveElement('video');
-        const vidSrc = activeVid ? (activeVid.currentSrc || activeVid.src || '') : '';
+        const postId = extractPostIdFromUrl(url);
         const activeAuthor = getActiveElement('[data-e2e="browse-username"], [data-e2e="video-author-uniqueid"]');
         const authorText = activeAuthor ? activeAuthor.textContent.trim() : '';
         const activeDesc = getActiveElement('[data-e2e="browse-video-desc"], [data-e2e="video-desc"]');
         const descText = activeDesc ? activeDesc.textContent.trim().slice(0, 40) : '';
-        return `${url}|${vidSrc}|${authorText}|${descText}`;
+
+        // cont.
+        const activePhotoContainer = getActiveElement(
+            '[data-e2e="photo-mode-container"], [data-e2e="browse-photo"], [class*="PhotoMode" i]'
+        );
+
+        let mediaIdentity = '';
+        const isPhotoUrl = url.includes('/photo/');
+        if (activePhotoContainer || isPhotoUrl) {
+            // anchor to the FIRST image in the container
+            // inside the same photo carousel never mutates the post-level signature
+            const firstImg = activePhotoContainer
+                ? activePhotoContainer.querySelector('img[src], img[srcset]')
+                : getActiveElement('img[src]');
+            const stableImgSrc = firstImg ? (firstImg.getAttribute('src') || firstImg.currentSrc || '') : '';
+            const imgCount = activePhotoContainer ? activePhotoContainer.querySelectorAll('img').length : 0;
+            mediaIdentity = `photo:${postId || stableImgSrc}|slides:${imgCount}`;
+        } else {
+            const activeVid = getActiveElement('video', v => {
+                const r = v.getBoundingClientRect();
+                return r.width > 120 && r.height > 120;
+            });
+            const vidSrc = activeVid ? (activeVid.currentSrc || activeVid.src || '') : '';
+            mediaIdentity = `video:${postId || vidSrc}`;
+        }
+
+        return `${url}|${mediaIdentity}|${authorText}|${descText}`;
     }
 
-    // --- STATE & RATE LIMITS ---
+    // rate limits
     let currentBatchLimit = randomDelay(15, 25);
     const SCROLL_TIMEOUT = 4000;
 
     let isRunning = false;
     let isProcessingLoop = false;
-    let totalCount = parseInt(localStorage.getItem('tur_processed_count') || '0', 10);
+    let totalCount = safeParseCount(localStorage.getItem('tur_processed_count'));
     let currentCount = 0;
     let skippedCount = 0;
     let batchCount = 0;
 
-    // --- ROGUE / STUCK DETECTION ---
+    // normalized storage
+    try {
+        localStorage.setItem('tur_processed_count', totalCount.toString());
+    } catch (_) {}
+
+    // --- rogue detection stuff
     let lastSignature = '';
     let stuckCount = 0;
     const STUCK_LIMIT = 3;
 
-    // --- INJECT STYLES ---
+    // inject styles
     function injectStyles() {
         if (document.getElementById('tur-styles')) return;
         const style = document.createElement('style');
@@ -257,12 +402,72 @@
     }
 
     function recordUnrepost() {
-        totalCount++;
+        totalCount = safeParseCount(totalCount) + 1;
         currentCount++;
         batchCount++;
-        localStorage.setItem('tur_processed_count', totalCount.toString());
+        try {
+            localStorage.setItem('tur_processed_count', totalCount.toString());
+        } catch (_) {}
         updateStatsUI();
-        log(`Unreposted video #${totalCount}`, 'success');
+        log(`Successful unrepost #${totalCount}`, 'success');
+    }
+
+    //confirms unrepost is genuine
+    async function verifyUnrepostSuccess(mode, triggerEl, shareIcon = null, openedViaHover = false) {
+        const startPostSig = getCurrentPostSignature();
+        const timeoutMs = 2200;
+        const intervalMs = 80;
+        const start = performance.now();
+
+        while (performance.now() - start < timeoutMs) {
+            if (!isRunning) return false;
+
+            // 1. Toast confirmation
+            if (hasUnrepostToast()) return true;
+
+            // 2. Auto-advance check
+            if (getCurrentPostSignature() !== startPostSig) return true;
+
+            if (mode === 'old-ui') {
+                const currentOldBtn = getActiveElement('a[data-e2e="video-share-repost"]');
+                // Button disappeared or its aria-label flipped from "Remove repost" -> "Repost"
+                if (!currentOldBtn) return true;
+                const updatedLabel = currentOldBtn.getAttribute('aria-label') || '';
+                if (updatedLabel && !isRemoveRepostLabel(updatedLabel)) return true;
+            } else if (mode === 'share-menu') {
+                const currentShareBtn = getShareRepostButton();
+                if (currentShareBtn) {
+                    const updatedText = currentShareBtn.textContent || currentShareBtn.getAttribute('aria-label') || '';
+                    // Still open, and label flipped from "Remove repost" -> "Repost"
+                    if (updatedText && !isRemoveRepostLabel(updatedText)) return true;
+                } else {
+                    // Share popover auto-closed after clicking "Remove repost". Re-probe once to confirm state flipped.
+                    await delay(220);
+                    if (hasUnrepostToast() || getCurrentPostSignature() !== startPostSig) return true;
+
+                    if (shareIcon && document.body.contains(shareIcon)) {
+                        let reopenedViaHover = false;
+                        safeHover(shareIcon);
+                        let verifyBtn = await waitForElement(getShareRepostButton, 400, 50);
+                        if (verifyBtn) {
+                            reopenedViaHover = true;
+                        } else {
+                            safeClick(shareIcon);
+                            verifyBtn = await waitForElement(getShareRepostButton, 800, 60);
+                        }
+                        if (verifyBtn) {
+                            const checkText = verifyBtn.textContent || verifyBtn.getAttribute('aria-label') || '';
+                            const succeeded = Boolean(checkText) && !isRemoveRepostLabel(checkText);
+                            await closeShareMenu(shareIcon, reopenedViaHover);
+                            return succeeded;
+                        }
+                    }
+                    return false;
+                }
+            }
+            await delay(intervalMs);
+        }
+        return false;
     }
 
     function createUI() {
@@ -274,7 +479,7 @@
 
         panel.innerHTML = `
             <div class="tur-header" id="tur-drag-handle">
-                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.7.3</span>
+                <span style="font-weight: 600; font-size: 13px; color: #fff;">Unrepost Bot v11.8.0</span>
                 <div style="display: flex; gap: 6px;">
                     <span id="tur-min-btn" class="tur-badge">—</span>
                     <span id="tur-open-tut" class="tur-badge">HELP</span>
@@ -389,48 +594,174 @@
         });
     }
 
+    //repost tab bring back logic
+    function isInsideTabNavigation(el) {
+        if (!el || el.closest('#tur-panel')) return false;
+        if (el.getAttribute('data-e2e') === 'repost-tab' || el.getAttribute('role') === 'tab') return true;
+        if (el.closest('[role="tablist"], [data-e2e="user-post-item-list-tab"], [class*="VideoFeedTab" i], [class*="UserTab" i], [class*="TabBar" i]')) {
+            return true;
+        }
+        // fallback
+        const parent = el.parentElement;
+        const grandParent = parent ? parent.parentElement : null;
+        if (grandParent) {
+            const siblingTabMatch = grandParent.querySelector(
+                '[data-e2e="videos-tab"], [data-e2e="liked-tab"], [data-e2e="favorites-tab"], [role="tab"]'
+            );
+            if (siblingTabMatch) return true;
+        }
+        return false;
+    }
+
     function unhideRepostsOnly() {
         const candidates = document.querySelectorAll(
-            '[data-e2e="repost-tab"], [role="tab"], [aria-label*="-tab"], div > span, div > p'
+            '[data-e2e="repost-tab"], [role="tab"], [aria-label*="-tab"], [role="tablist"] span, [role="tablist"] p, div > span, div > p'
         );
-        const tabKeywords = ['reposts', 'repost', 'republications', 'republicaciones', 'republicações', 'ripubblicazioni'];
+        const tabKeywords = ['reposts', 'repost', 'republications', 'republicaciones', 'republicações', 'ripubblicazioni', 'репосты'];
         let found = 0;
 
         candidates.forEach(el => {
+            if (!isInsideTabNavigation(el)) return;
             const text = el.textContent.trim().toLowerCase();
             const isE2ERepost = el.getAttribute('data-e2e') === 'repost-tab';
             if (isE2ERepost || tabKeywords.includes(text)) {
                 el.style.setProperty('display', 'flex', 'important');
-                if (el.parentElement) el.parentElement.style.setProperty('display', 'flex', 'important');
+                el.style.setProperty('visibility', 'visible', 'important');
+                el.removeAttribute('hidden');
+                const tabWrapper = el.closest('[role="tab"], [data-e2e="repost-tab"]') || el.parentElement;
+                if (tabWrapper && tabWrapper !== document.body && !tabWrapper.matches('[role="tablist"]')) {
+                    tabWrapper.style.setProperty('display', 'flex', 'important');
+                    tabWrapper.style.setProperty('visibility', 'visible', 'important');
+                    tabWrapper.removeAttribute('hidden');
+                }
                 found++;
             }
         });
-        log(found > 0 ? 'Unhid Reposts tab.' : 'Reposts tab not found.', found > 0 ? 'success' : 'warn');
+        log(found > 0 ? 'Unhid Reposts tab.' : 'Reposts tab not found on profile tab bar.', found > 0 ? 'success' : 'warn');
     }
 
-    // Safely closes the Share popover without accidentally clicking the fullscreen video player's Close button
-    async function closeShareMenu(shareIcon) {
-        const safeCloseBtn = document.querySelector(
-            '[role="dialog"] button[aria-label="close" i]:not([data-e2e="browse-close"]), .TUXNavBarIconButton'
-        );
+    // Safely closes ONLY the Share popover/dialog without clicking top-level nav icons or the fullscreen player close button
+    async function closeShareMenu(shareIcon, openedViaHover = false) {
+        const shareBtn = getShareRepostButton();
+        const sharePopoverRoot = shareBtn
+            ? shareBtn.closest('[role="dialog"], [data-radix-popper-content-wrapper], [class*="Share" i], [class*="Popover" i]')
+            : null;
+        let safeCloseBtn = null;
+
+        if (sharePopoverRoot) {
+            safeCloseBtn = sharePopoverRoot.querySelector(
+                'button[aria-label="close" i]:not([data-e2e="browse-close"]), ' +
+                '.TUXNavBarIconButton:not([data-e2e="browse-close"])'
+            );
+        } else {
+            // Fallback strictly inside an open dialog that is NOT the main video browse modal
+            const dialogs = document.querySelectorAll('[role="dialog"]');
+            for (const dlg of dialogs) {
+                if (dlg.querySelector('[data-e2e="browse-video"], [data-e2e="browse-close"]')) continue;
+                const btn = dlg.querySelector('button[aria-label="close" i], .TUXNavBarIconButton');
+                if (btn) {
+                    safeCloseBtn = btn;
+                    break;
+                }
+            }
+        }
+
         if (safeCloseBtn) {
             safeClick(safeCloseBtn);
-        } else if (shareIcon) {
-            safeClick(shareIcon);
+        } else if (openedViaHover && shareIcon) {
+            safeUnhover(shareIcon);
+            document.body.dispatchEvent(new PointerEvent('pointermove', {
+                bubbles: true, cancelable: true, view: window, clientX: 5, clientY: 5
+            }));
+        } else {
+            // Escape key cleanly dismisses
+            document.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true
+            }));
+            await delay(120);
+            if (getShareRepostButton() && shareIcon) {
+                safeUnhover(shareIcon);
+                // outside-click dismissal logic, somehow well implemented LOL
+                const neutralSpot = document.getElementById('tur-drag-handle');
+                if (neutralSpot) safeClick(neutralSpot);
+            }
         }
         await delay(randomDelay(250, 400));
     }
 
-    function sendArrowDown() {
-        const nextBtn = getActiveElement('button[data-e2e="arrow-right"]') ||
-                        getActiveElement('button[aria-label*="Next video" i]');
+    // Locates the Repost action inside the Share popup
+    function getShareRepostButton() {
+        return getActiveElement('[data-e2e="share-repost"]') ||
+               document.querySelector('[role="dialog"] [data-e2e="share-repost"]') ||
+               document.querySelector('[data-e2e="share-repost"]');
+    }
 
-        if (nextBtn && !nextBtn.disabled) {
+    // finds the feed-level Next Post button while excluding horizontal photo-carousel arrows
+    function getNextPostButton() {
+        const notCarousel = el => !isPhotoCarouselButton(el);
+        return getActiveElement('button[data-e2e="arrow-right"]', notCarousel) ||
+               getActiveElement('[data-e2e="arrow-right"]', notCarousel) ||
+               getActiveElement('button[data-e2e="arrow-down"]', notCarousel) ||
+               getActiveElement('button[aria-label*="Next video" i]', notCarousel) ||
+               getActiveElement('button[aria-label*="Next post" i]', notCarousel) ||
+               getActiveElement(
+                   'button[aria-label*="Next" i]:not([data-e2e="browse-close"])',
+                   el => notCarousel(el) && !/\b(photo|slide|image|page)\b/i.test(el.getAttribute('aria-label') || '')
+               );
+    }
+
+    function sendArrowDown() {
+        const nextBtn = getNextPostButton();
+        if (nextBtn && !nextBtn.disabled && nextBtn.getAttribute('aria-disabled') !== 'true') {
             safeClick(nextBtn);
             return true;
         }
 
-        log('Next button unavailable; trying ArrowDown key fallback...', 'warn');
+        log('Next-post button unavailable; trying fallback...', 'warn');
+
+        // 1. Vertical WheelEvent simulation on active media container (vertical deltaY only advances feed, never horizontal photo swiper)
+        const scrollTarget = getActiveElement('[data-e2e="browse-video"]') ||
+                             getActiveElement('[data-e2e="photo-mode-container"]') ||
+                             getActiveElement('[data-e2e="browse-photo"]') ||
+                             getActiveElement('video') ||
+                             document.scrollingElement ||
+                             document.body;
+
+        if (scrollTarget) {
+            try {
+                const rect = scrollTarget.getBoundingClientRect();
+                scrollTarget.dispatchEvent(new WheelEvent('wheel', {
+                    deltaX: 0,
+                    deltaY: 650,
+                    deltaMode: 0,
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.top + rect.height / 2,
+                    bubbles: true,
+                    cancelable: true,
+                    view: window
+                }));
+            } catch (_) {}
+        }
+
+        // 2. Vertical scrollable feed container advance (ignores horizontal overflow-x photo carousels)
+        try {
+            let scroller = scrollTarget ? scrollTarget.parentElement : null;
+            let scrolledContainer = false;
+            while (scroller && scroller !== document.body && scroller !== document.documentElement) {
+                const style = window.getComputedStyle(scroller);
+                if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && scroller.scrollHeight > scroller.clientHeight + 50) {
+                    scroller.scrollBy({ top: window.innerHeight * 0.85, left: 0, behavior: 'smooth' });
+                    scrolledContainer = true;
+                    break;
+                }
+                scroller = scroller.parentElement;
+            }
+            if (!scrolledContainer && document.documentElement.scrollHeight > window.innerHeight + 50) {
+                window.scrollBy({ top: window.innerHeight * 0.85, left: 0, behavior: 'smooth' });
+            }
+        } catch (_) {}
+
+        // 3. Original ArrowDown KeyboardEvent fallback preserved (ArrowDown moves vertically between posts, unlike ArrowRight)
         const target = document.activeElement || document.body;
         target.dispatchEvent(new KeyboardEvent('keydown', {
             key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true, cancelable: true
@@ -526,27 +857,39 @@
 
                     if (isRemoveRepostLabel(ariaLabel)) {
                         safeClick(oldRepostBtn);
-                        recordUnrepost();
-                        await delay(randomDelay(1200, 1900));
+                        const verified = await verifyUnrepostSuccess('old-ui', oldRepostBtn);
+                        if (verified) {
+                            recordUnrepost();
+                        } else {
+                            log('Removed repost, but state change was not confirmed.', 'warn');
+                        }
+                        await delay(randomDelay(900, 1500));
                     } else {
                         skippedCount++;
                         updateStatsUI();
-                        log('Video not reposted. Skipping.');
+                        log('Post not reposted. Skipping.');
                     }
                 } else {
-                    // --- 2. NEW UI (SHARE MENU DETECTION) ---
+                    // NEWU UI LOGIC
                     const shareIcon = getActiveElement('div[data-e2e="share-icon"]') ||
-                                      getActiveElement('button[data-e2e="share-icon"]');
+                                      getActiveElement('button[data-e2e="share-icon"]') ||
+                                      getActiveElement('[data-e2e="browse-share-icon"]');
 
                     if (shareIcon) {
-                        safeClick(shareIcon);
+                        let openedViaHover = false;
 
-                        const shareMenuRepostBtn = await waitForElement(() =>
-                            getActiveElement('[data-e2e="share-repost"]') ||
-                            document.querySelector('[role="dialog"] [data-e2e="share-repost"]') ||
-                            document.querySelector('[data-e2e="share-repost"]'),
-                            1800, 60
-                        );
+                        // Step A
+                        safeHover(shareIcon);
+                        let shareMenuRepostBtn = await waitForElement(getShareRepostButton, 350, 50);
+
+                        if (shareMenuRepostBtn) {
+                            openedViaHover = true;
+                        } else if (isRunning) {
+                            // Step B: fallback
+                            safeUnhover(shareIcon);
+                            safeClick(shareIcon);
+                            shareMenuRepostBtn = await waitForElement(getShareRepostButton, 1500, 60);
+                        }
 
                         if (!isRunning) break;
 
@@ -555,17 +898,24 @@
 
                             if (isRemoveRepostLabel(btnText)) {
                                 safeClick(shareMenuRepostBtn);
-                                recordUnrepost();
-                                await delay(randomDelay(1200, 1900));
+                                const verified = await verifyUnrepostSuccess('share-menu', shareMenuRepostBtn, shareIcon, openedViaHover);
+                                if (openedViaHover) safeUnhover(shareIcon);
+                                if (verified) {
+                                    recordUnrepost();
+                                } else {
+                                    log('Clicked remove repost, but state change was not confirmed.', 'warn');
+                                    await closeShareMenu(shareIcon, openedViaHover);
+                                }
+                                await delay(randomDelay(900, 1500));
                             } else {
                                 skippedCount++;
                                 updateStatsUI();
-                                log('Video not reposted by you. Skipping.');
-                                await closeShareMenu(shareIcon);
+                                log('Post not reposted by you. Skipping.');
+                                await closeShareMenu(shareIcon, openedViaHover);
                             }
                         } else {
                             log('Repost option missing from Share menu.', 'warn');
-                            await closeShareMenu(shareIcon);
+                            await closeShareMenu(shareIcon, openedViaHover);
                         }
                     } else {
                         log('Share icon missing from DOM.', 'warn');
@@ -614,5 +964,4 @@
     }
 
     initObserver();
-
 })();
