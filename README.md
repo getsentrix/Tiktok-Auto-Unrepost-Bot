@@ -1,29 +1,55 @@
-# Tiktok-Auto-Unrepost-Bot
-A Tampermonkey script to mass-remove TikTok reposts while running completely AFK.
+# TikTok Auto Unrepost Bot
+
+A browser userscript that automates the process of removing reposts from your TikTok account. It provides a simple control panel, automated navigation, and post-state verification to make managing large repost histories easier.
 
 ## Features
 
-* **Dynamic Rate Limit Evasion:** Automatically recalculates batch limits and cooldown timers per cycle to simulate human interaction patterns and get around server-side triggers.
-* **Rogue State Detection:** Monitors URL state continuously. If the feed bottoms out or the script gets trapped on an unscrollable sponsored post, it safely stops the script.
-* **Precise DOM Targeting:** Evaluates explicit `data-e2e` nodes and polls `aria-label` states to confirm post status before firing synthetic clicks.
-* **Minimalist Interface:** Injects a lightweight, non-intrusive control panel directly into the DOM.
+- **Automated Unreposting:** Automatically navigates through your repost feed and removes reposts without requiring manual interaction with every post.
+- **Smart Post Detection:** Identifies relevant TikTok interface elements and checks post states before attempting actions.
+- **Action Verification:** Uses available interface indicators to determine whether an unrepost action was successful.
+- **Automatic Navigation:** Handles movement between posts and accounts for different post formats and feed layouts.
+- **Adaptive Execution:** Uses configurable timing, pauses, and execution controls to manage automated actions.
+- **Feed State Monitoring:** Detects navigation issues, stalled feeds, and other conditions that may prevent normal operation.
+- **Lightweight Interface:** Adds a compact control panel directly to TikTok, providing access to the script's main functions and controls.
 
 ## Installation
 
-1. Install a userscript manager such as [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/) in your browser.
-2. Click **[here](https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot/raw/refs/heads/main/tiktok-unrepost.user.js)** to install the script. 
+1. Install a userscript manager for your browser:
+   - [Tampermonkey](https://www.tampermonkey.net/)
+   - [Violentmonkey](https://violentmonkey.github.io/)
+2. Install the script using the following link:
+
+   **[Install TikTok Auto Unrepost Bot](https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot/raw/refs/heads/main/tiktok-unrepost.user.js)**
+
+3. Allow the userscript manager to install and enable the script.
+4. Open TikTok and navigate to your profile.
 
 ## Usage
 
 1. Navigate to your TikTok profile.
-2. If the Reposts tab is hidden by TikTok's UI, click **Unhide Reposts Tab** on the script.
-3. Open the **first** video in your Reposts grid so it occupies the full viewport. *(Note: If the feed fails to render and displays a black screen, return to the For You page, manually repost one video to flush the cache, and try again).*
-4. Click **Start Auto-Unrepost**.
-5. **You can now switch tabs / leave the browser.** Do not input manual keyboard or mouse commands while the script is running, as this will desync the hardcoded rendering delays.
+2. If the Reposts tab is hidden, use the script's **Unhide Reposts Tab** control.
+3. Open a post from your Reposts tab so it is displayed in the full-screen viewer.
+4. Open the script's control panel.
+5. Select **Start Auto-Unrepost** to begin automated processing.
+6. Monitor the script through its interface while it works.
 
-## Known Limitations & Maintenance
+For consistent operation, avoid manually interacting with TikTok while the automation is running. Manual navigation or other interactions may interfere with automated processing.
 
-This script relies on specific data tags within TikTok's DOM structure. When TikTok's UI updates, this script will lose functionality until patched.
 
-**License:** MIT License  
-**Support/Bug Reports:** Contact `@dprits2` on Discord.
+## Troubleshooting
+
+- **Reposts tab is missing:** Use the **Unhide Reposts Tab** control.
+- **Posts are not loading:** Refresh TikTok and reopen the Reposts feed.
+- **Automation stops unexpectedly:** Check whether the feed is still loading or whether TikTok has changed the current page state.
+- **Actions are not registering:** Allow the page to finish rendering before restarting the automation.
+- **Unexpected behavior:** Restart the script and try again from the first post in your Reposts feed.
+
+## License
+
+Distributed under the [MIT License](LICENSE).
+
+## Support & Bug Reports
+
+For bug reports, questions, or suggestions, contact **@dprits2** on Discord.
+
+When reporting an issue, include a description of the problem and, if possible, the browser and userscript manager you are using.
