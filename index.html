@@ -1,0 +1,772 @@
+<!-- index.html — TikTok Auto Unrepost Bot Showcase & GitHub Pages Site -->
+<!-- language: html / css / javascript | runtime: browser | target: github pages -->
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Auto Unrepost Bot | Mass Unrepost on Autopilot</title>
+    <meta name="description" content="A simple browser script that automatically removes your TikTok reposts. Safe delays, works on desktop, skips photo slideshows, and 100% free.">
+    <meta name="theme-color" content="#09090b">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN for GitHub Pages + Custom Utility Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            red: '#ff3b5c',
+                            cyan: '#00f2fe',
+                            accent: '#ff4757',
+                            dark: '#09090b',
+                            card: '#121217',
+                            border: 'rgba(255, 255, 255, 0.08)'
+                        }
+                    },
+                    animation: {
+                        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '0.4', transform: 'scale(1)' },
+                            '50%': { opacity: '0.8', transform: 'scale(1.05)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #09090b;
+            color: #ededed;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            overflow-x: hidden;
+        }
+
+        ::selection {
+            background: #ff3b5c;
+            color: #ffffff;
+        }
+
+        /* Ambient Glow & Grid */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        .glow-radial {
+            background: radial-gradient(circle at 50% 20%, rgba(255, 59, 92, 0.15) 0%, rgba(0, 242, 254, 0.05) 45%, transparent 70%);
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: rgba(18, 18, 23, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+        }
+
+        .glass-card-hover {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .glass-card-hover:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 25px 50px -12px rgba(255, 59, 92, 0.12);
+        }
+
+        /* Gradient Text */
+        .text-gradient {
+            background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .text-gradient-brand {
+            background: linear-gradient(135deg, #ff3b5c 0%, #ff758c 50%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Button Glow */
+        .btn-glow {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .btn-glow::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(90deg, #ff3b5c, #00f2fe);
+            border-radius: inherit;
+            z-index: -1;
+            filter: blur(12px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-glow:hover::after {
+            opacity: 0.6;
+        }
+
+        /* Custom Scrollbar for Demo */
+        .sim-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sim-scroll::-webkit-scrollbar-track {
+            background: #0d0d10;
+        }
+        .sim-scroll::-webkit-scrollbar-thumb {
+            background: #27272a;
+            border-radius: 4px;
+        }
+
+        @keyframes turPulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 71, 87, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+        }
+        .sim-pulse-active {
+            animation: turPulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+    </style>
+</head>
+<body class="relative min-h-screen">
+
+    <!-- Ambient Lighting & Grid Backdrop -->
+    <div class="fixed inset-0 bg-grid pointer-events-none z-0"></div>
+    <div class="fixed inset-0 glow-radial pointer-events-none z-0"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 pt-4">
+        <div class="max-w-7xl mx-auto">
+            <nav class="glass-card rounded-2xl px-5 py-3.5 flex items-center justify-between border border-white/10 shadow-2xl">
+                <!-- Brand Logo & Badge -->
+                <a href="#" class="flex items-center gap-3 group">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-red to-purple-600 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-red/20 group-hover:scale-105 transition-transform">
+                        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M21 3v5h-5"/>
+                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                            <path d="M8 16H3v5"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold tracking-tight text-white text-base">Unrepost Bot</span>
+                            <span class="bg-brand-red/15 text-brand-red text-[11px] font-semibold px-2 py-0.5 rounded-full border border-brand-red/30">v11.8.0</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-400 font-mono tracking-wider">TIKTOK CLEANER</p>
+                    </div>
+                </a>
+
+                <!-- Desktop Nav Links -->
+                <div class="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-300">
+                    <a href="#features" class="hover:text-white transition-colors">Features</a>
+                    <a href="#simulator" class="hover:text-white transition-colors">Interactive Demo</a>
+                    <a href="#install" class="hover:text-white transition-colors">How to Install</a>
+                    <a href="#faq" class="hover:text-white transition-colors">FAQ</a>
+                </div>
+
+                <!-- CTA Actions -->
+                <div class="flex items-center gap-3">
+                    <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10" title="GitHub Repository">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                    <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="btn-glow px-4 py-2 rounded-xl bg-gradient-to-r from-brand-red to-rose-600 hover:from-rose-500 hover:to-brand-red text-white text-xs sm:text-sm font-semibold shadow-lg shadow-brand-red/25 flex items-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span>Install Script</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="relative z-10 pt-32 pb-24 px-4 sm:px-8 max-w-7xl mx-auto space-y-28">
+
+        <!-- Hero Section -->
+        <section class="text-center pt-8 sm:pt-14 space-y-6 max-w-4xl mx-auto">
+            <!-- Security & Status Tag -->
+            <div class="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full glass-card border-brand-red/30 text-xs font-mono text-zinc-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Works on TikTok Desktop</span>
+                <span class="text-zinc-600">•</span>
+                <span class="text-brand-cyan">No Passwords or Logins</span>
+            </div>
+
+            <!-- Main Headline -->
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1]">
+                <span class="text-gradient">Clean your TikTok reposts.</span><br>
+                <span class="text-gradient-brand">All on autopilot.</span>
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="text-base sm:text-xl text-zinc-400 font-normal max-w-2xl mx-auto leading-relaxed">
+                A free browser script that removes all your old TikTok reposts for you. It clicks through your reposts feed, skips photo slideshows, and pauses automatically so your account stays safe.
+            </p>
+
+            <!-- Action Buttons -->
+            <div class="pt-4 flex flex-wrap items-center justify-center gap-4">
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="btn-glow px-6 py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-black font-bold text-sm shadow-xl flex items-center gap-2.5 transition-all">
+                    <svg class="w-4 h-4 text-brand-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    <span>Install via Tampermonkey</span>
+                </a>
+                <a href="#simulator" class="px-6 py-3.5 rounded-xl glass-card hover:bg-white/5 text-zinc-300 hover:text-white font-semibold text-sm border border-white/10 flex items-center gap-2 transition-all">
+                    <span>Try Interactive Demo</span>
+                    <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 13l5 5 5-5M7 6l5 5 5-5"/>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Key Metric Metrics Pills -->
+            <div class="pt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
+                <div class="glass-card p-3 rounded-xl border border-white/5 text-center">
+                    <div class="text-xl font-bold font-mono text-white">100% Free</div>
+                    <div class="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Open Source</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5 text-center">
+                    <div class="text-xl font-bold font-mono text-brand-cyan">Auto-Pause</div>
+                    <div class="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Every 15-25 Posts</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5 text-center">
+                    <div class="text-xl font-bold font-mono text-brand-red">12+</div>
+                    <div class="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Languages Supported</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-white/5 text-center">
+                    <div class="text-xl font-bold font-mono text-emerald-400">Zero</div>
+                    <div class="text-[11px] text-zinc-400 uppercase tracking-wider mt-0.5">Passcodes Required</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Interactive Bot Demo -->
+        <section id="simulator" class="pt-6">
+            <div class="text-center space-y-3 mb-10">
+                <div class="inline-block px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan font-mono text-xs">INTERACTIVE DEMO</div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Try It Right Here</h2>
+                <p class="text-zinc-400 text-sm max-w-xl mx-auto">Click "Start Auto-Unrepost" on the little panel to see how it works on real posts.</p>
+            </div>
+
+            <!-- Simulator Container -->
+            <div class="relative glass-card rounded-3xl p-4 sm:p-8 border border-white/10 max-w-5xl mx-auto overflow-hidden">
+                <!-- Browser Window Header Frame -->
+                <div class="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                        <span class="ml-2 text-xs font-mono text-zinc-400">tiktok.com/@user/reposts</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs font-mono text-zinc-500">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>DEMO RUNNING</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    
+                    <!-- Simulated TikTok Post Viewport (Left/Center) -->
+                    <div class="lg:col-span-7 bg-zinc-950/80 rounded-2xl border border-white/5 p-4 sm:p-6 flex flex-col justify-between min-h-[440px] relative overflow-hidden">
+                        <!-- Post Meta Header -->
+                        <div class="flex items-center justify-between z-10">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-red to-purple-600 flex items-center justify-center font-bold text-white text-xs" id="sim-avatar">
+                                    TT
+                                </div>
+                                <div>
+                                    <div class="font-bold text-sm text-white flex items-center gap-1.5">
+                                        <span id="sim-author">@creativetrends</span>
+                                        <svg class="w-3.5 h-3.5 text-brand-cyan fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                                    </div>
+                                    <div class="text-[11px] text-zinc-400 font-mono" id="sim-post-id">Post ID: 738192847291823</div>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-[11px] font-mono text-zinc-300" id="sim-media-type">
+                                📹 Video Media
+                            </span>
+                        </div>
+
+                        <!-- Post Center Media Art -->
+                        <div class="my-6 py-12 flex flex-col items-center justify-center text-center z-10 transition-all" id="sim-media-card">
+                            <div class="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-zinc-400 group-hover:scale-105 transition-transform" id="sim-media-icon">
+                                <svg class="w-10 h-10 text-brand-red" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
+                            </div>
+                            <h3 class="font-semibold text-lg text-white" id="sim-caption">Viral Transition Trend #fyp #viral</h3>
+                            <p class="text-xs text-zinc-400 mt-1" id="sim-reposted-by">You reposted this 3 days ago</p>
+
+                            <!-- Toast Notification Simulation Overlay -->
+                            <div id="sim-toast" class="opacity-0 translate-y-3 transition-all duration-300 mt-4 px-4 py-2 rounded-xl bg-zinc-900 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-2xl flex items-center gap-2">
+                                <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span>Your repost has been removed</span>
+                            </div>
+                        </div>
+
+                        <!-- Simulated Feed Bottom Controls -->
+                        <div class="border-t border-white/5 pt-3 flex items-center justify-between text-xs text-zinc-400 z-10">
+                            <span id="sim-feed-status">Feed Status: Ready (Post 1 of 80)</span>
+                            <div class="flex items-center gap-2">
+                                <button id="sim-manual-next" class="px-3 py-1 rounded bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-medium transition-colors">
+                                    Next Video ↓
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Injected UserScript Panel (Right) -->
+                    <div class="lg:col-span-5 flex flex-col justify-center">
+                        <div class="bg-[#161616] border border-[#2a2a2a] rounded-xl p-4 text-[#eaeaea] shadow-2xl w-full max-w-sm mx-auto select-none" id="sim-bot-panel">
+                            <!-- Panel Header -->
+                            <div class="flex items-center justify-between border-b border-[#333] pb-2 mb-3 cursor-move">
+                                <span class="font-semibold text-[13px] text-white">Unrepost Bot v11.8.0</span>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[11px] font-semibold bg-[#222] hover:bg-[#333] text-zinc-400 hover:text-white px-2 py-0.5 rounded cursor-pointer transition-colors" id="sim-btn-min">—</span>
+                                    <span class="text-[11px] font-semibold bg-[#222] hover:bg-[#333] text-zinc-400 hover:text-white px-2 py-0.5 rounded cursor-pointer transition-colors" id="sim-btn-help">HELP</span>
+                                </div>
+                            </div>
+
+                            <!-- Panel Controls -->
+                            <div class="space-y-2.5" id="sim-panel-body">
+                                <button id="sim-unhide-btn" class="w-full bg-[#222] hover:bg-[#2f2f2f] text-white border border-[#333] text-xs font-medium py-2 rounded-md transition-all">
+                                    Unhide Reposts Tab
+                                </button>
+
+                                <!-- Stats Grid -->
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <div class="bg-[#111] border border-[#222] rounded-md p-2 text-center">
+                                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Current</div>
+                                        <div class="text-sm font-bold text-white mt-0.5 font-mono" id="sim-stat-current">0</div>
+                                    </div>
+                                    <div class="bg-[#111] border border-[#222] rounded-md p-2 text-center">
+                                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">Skipped</div>
+                                        <div class="text-sm font-bold text-zinc-400 mt-0.5 font-mono" id="sim-stat-skipped">0</div>
+                                    </div>
+                                    <div class="bg-[#111] border border-[#222] rounded-md p-2 text-center">
+                                        <div class="text-[10px] text-zinc-500 uppercase tracking-wider font-mono">All-Time</div>
+                                        <div class="text-sm font-bold text-emerald-400 mt-0.5 font-mono" id="sim-stat-total">1,248</div>
+                                    </div>
+                                </div>
+
+                                <!-- Primary Toggle Action Button -->
+                                <button id="sim-toggle-btn" class="w-full bg-white hover:bg-zinc-200 text-black font-semibold text-xs py-2.5 rounded-md transition-all">
+                                    Start Auto-Unrepost
+                                </button>
+
+                                <!-- Terminal Console -->
+                                <div class="h-28 bg-[#0a0a0a] border border-[#222] rounded-md p-2 font-mono text-[11px] space-y-1 overflow-y-auto sim-scroll" id="sim-console">
+                                    <div class="text-zinc-500">[20:15:00] Discord: @dprits2. Ready.</div>
+                                    <div class="text-zinc-500">[20:15:01] Ready to unrepost.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Caption Note Below Panel -->
+                        <p class="text-center text-[11px] text-zinc-500 font-mono mt-3">
+                            Click <strong class="text-zinc-300">Start Auto-Unrepost</strong> above to watch simulated execution.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Bento Grid -->
+        <section id="features" class="space-y-12">
+            <div class="text-center space-y-3">
+                <div class="inline-block px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red font-mono text-xs">WHY IT WORKS</div>
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-white">Built to Work When TikTok Updates</h2>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto">TikTok changes their website design all the time. This script looks for actual buttons and text instead of breaking every week.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-brand-red/10 border border-brand-red/20 flex items-center justify-center text-brand-red">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                            <line x1="7" y1="2" x2="7" y2="22"/>
+                            <line x1="17" y1="2" x2="17" y2="22"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <line x1="2" y1="7" x2="7" y2="7"/>
+                            <line x1="2" y1="17" x2="7" y2="17"/>
+                            <line x1="17" y1="17" x2="22" y2="17"/>
+                            <line x1="17" y1="7" x2="22" y2="7"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Skips Photo Slideshows</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Never gets stuck flipping sideways through photos. It recognizes photo albums and scrolls down to the next video properly.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-brand-cyan/10 border border-brand-cyan/20 flex items-center justify-center text-brand-cyan">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Safe Delays & Pauses</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Automatically takes a quick break every 15 to 25 videos with human-like delays so TikTok won't flag or temporarily lock your account.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center text-emerald-400">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Checks Before Counting</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Checks that the removal notification actually showed up before counting it and moving to the next post. No fake numbers.
+                    </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-purple-400/10 border border-purple-400/20 flex items-center justify-center text-purple-400">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="2" y1="12" x2="22" y2="12"/>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Works in Your Language</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Works in English, Spanish, French, German, Russian, Portuguese, Turkish, Polish, and Italian without having to change any settings.
+                    </p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center text-amber-400">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Unhides Your Reposts Tab</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        TikTok likes to hide the Reposts tab on computer browsers. One click on "Unhide Reposts Tab" brings it right back so you can open it.
+                    </p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="glass-card glass-card-hover rounded-2xl p-6 sm:p-8 space-y-4">
+                    <div class="w-12 h-12 rounded-xl bg-rose-400/10 border border-rose-400/20 flex items-center justify-center text-rose-400">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">100% Free & Open Source</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        No logins, no passwords, and no weird permissions. Everything runs straight in your own browser tab and you can read the code anytime.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step-by-Step Installation Guide -->
+        <section id="install" class="space-y-12">
+            <div class="text-center space-y-3">
+                <div class="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white font-mono text-xs">SETUP GUIDE</div>
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-white">Ready in Under 60 Seconds</h2>
+                <p class="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">Just add a script manager extension to your browser and click install.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Step 1 -->
+                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative">
+                    <div class="text-4xl font-extrabold font-mono text-white/20">01</div>
+                    <h3 class="text-lg font-bold text-white">Install a Script Manager</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Add a script extension to your browser:
+                    </p>
+                    <div class="flex flex-col gap-2 pt-2">
+                        <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-200 flex items-center justify-between">
+                            <span>Tampermonkey (Recommended)</span>
+                            <span class="text-zinc-500">↗</span>
+                        </a>
+                        <a href="https://violentmonkey.github.io/" target="_blank" rel="noreferrer" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-zinc-200 flex items-center justify-between">
+                            <span>Violentmonkey</span>
+                            <span class="text-zinc-500">↗</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative border-brand-red/30">
+                    <div class="text-4xl font-extrabold font-mono text-brand-red/30">02</div>
+                    <h3 class="text-lg font-bold text-white">Add the Script</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Click the button below to add the script to your manager:
+                    </p>
+                    <div class="pt-2">
+                        <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" class="w-full btn-glow px-4 py-3 rounded-xl bg-brand-red hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-brand-red/20">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+                            <span>Install Free Script</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-4 relative">
+                    <div class="text-4xl font-extrabold font-mono text-white/20">03</div>
+                    <h3 class="text-lg font-bold text-white">Open TikTok & Start</h3>
+                    <p class="text-zinc-400 text-sm leading-relaxed">
+                        Go to your TikTok profile, click your Reposts tab, open the first post, and click <strong class="text-white">Start Auto-Unrepost</strong>.
+                    </p>
+                    <div class="p-3 rounded-xl bg-zinc-950/60 border border-white/5 font-mono text-xs text-zinc-400">
+                        💡 Tip: Leave the tab in view while it runs so it scrolls smoothly.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Accordion -->
+        <section id="faq" class="space-y-8 max-w-3xl mx-auto">
+            <div class="text-center space-y-3">
+                <div class="inline-block px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan font-mono text-xs">QUESTIONS & ANSWERS</div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Frequently Asked Questions</h2>
+            </div>
+
+            <div class="space-y-4">
+                <!-- FAQ Item 1 -->
+                <div class="glass-card rounded-xl border border-white/10 overflow-hidden">
+                    <button class="w-full p-5 text-left font-semibold text-white flex items-center justify-between text-sm sm:text-base faq-trigger" onclick="toggleFaq(this)">
+                        <span>Why can't I see my Reposts tab on my computer?</span>
+                        <svg class="w-4 h-4 text-zinc-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div class="px-5 pb-5 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content">
+                        TikTok hides the Reposts tab by default on their desktop website. When you install this script, it adds an "Unhide Reposts Tab" button directly to the page that makes it visible again with one click.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="glass-card rounded-xl border border-white/10 overflow-hidden">
+                    <button class="w-full p-5 text-left font-semibold text-white flex items-center justify-between text-sm sm:text-base faq-trigger" onclick="toggleFaq(this)">
+                        <span>Will my TikTok account get banned or restricted?</span>
+                        <svg class="w-4 h-4 text-zinc-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div class="px-5 pb-5 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content">
+                        Doing anything too fast on social media can get you temporarily rate-limited. This bot takes random breaks every 15 to 25 posts to keep things looking natural. For best results, clear in batches of 100 to 200 posts per day.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="glass-card rounded-xl border border-white/10 overflow-hidden">
+                    <button class="w-full p-5 text-left font-semibold text-white flex items-center justify-between text-sm sm:text-base faq-trigger" onclick="toggleFaq(this)">
+                        <span>Does it work on photo slideshows?</span>
+                        <svg class="w-4 h-4 text-zinc-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
+                    <div class="px-5 pb-5 text-zinc-400 text-xs sm:text-sm leading-relaxed hidden faq-content">
+                        Yes. It knows the difference between flipping sideways through photo slides and scrolling down to the next post, so it won't get stuck.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-white/10 bg-zinc-950/80 backdrop-blur-md py-12 px-4 sm:px-8">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs text-zinc-400">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-lg bg-brand-red flex items-center justify-center font-bold text-white text-[10px]">
+                    TUR
+                </div>
+                <span>TikTok Auto Unrepost Bot • Maintained by <strong class="text-zinc-200">@getsentrix</strong></span>
+            </div>
+
+            <div class="flex items-center gap-6">
+                <a href="https://github.com/getsentrix/Tiktok-Auto-Unrepost-Bot" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">GitHub Repository</a>
+                <a href="https://update.greasyfork.org/scripts/588508/TikTok%20Unrepost%20Bot%20Stable.user.js" target="_blank" rel="noreferrer" class="hover:text-white transition-colors">GreasyFork</a>
+                <span class="text-zinc-600">•</span>
+                <span>Discord: <strong class="text-brand-cyan font-mono">@dprits2</strong></span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Simulator Script -->
+    <script>
+        // Interactive Live Demo Logic
+        let simRunning = false;
+        let simInterval = null;
+        let simCurrent = 0;
+        let simSkipped = 0;
+        let simTotal = 1248;
+        let simPostIndex = 0;
+
+        const mockPosts = [
+            { author: '@creativetrends', id: '738192847291823', caption: 'Viral Transition Trend #fyp #viral', type: '📹 Video Media', reposted: true },
+            { author: '@technewsdaily', id: '739281928471029', caption: 'New hardware leak revealed today!', type: '📹 Video Media', reposted: true },
+            { author: '@artgallery', id: '740192847192847', caption: 'Digital illustration photo set (8 photos)', type: '🖼️ Photo Carousel', reposted: true },
+            { author: '@comedyvibes', id: '741928471928471', caption: 'When you try to code on 2 hours of sleep', type: '📹 Video Media', reposted: false },
+            { author: '@lofifrequencies', id: '742918274918274', caption: 'Chill beats for late night focus 🎧', type: '📹 Video Media', reposted: true }
+        ];
+
+        function logSim(msg, color = '#a0a0a0') {
+            const consoleEl = document.getElementById('sim-console');
+            if (!consoleEl) return;
+            const time = new Date().toLocaleTimeString([], { hour12: false });
+            const entry = document.createElement('div');
+            entry.style.color = color;
+            entry.textContent = `[${time}] ${msg}`;
+            consoleEl.appendChild(entry);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function showSimToast() {
+            const toast = document.getElementById('sim-toast');
+            toast.classList.remove('opacity-0', 'translate-y-3');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-3');
+                toast.classList.remove('opacity-100', 'translate-y-0');
+            }, 1400);
+        }
+
+        function renderMockPost() {
+            const post = mockPosts[simPostIndex % mockPosts.length];
+            document.getElementById('sim-author').textContent = post.author;
+            document.getElementById('sim-post-id').textContent = `Post ID: ${post.id}`;
+            document.getElementById('sim-caption').textContent = post.caption;
+            document.getElementById('sim-media-type').textContent = post.type;
+            document.getElementById('sim-avatar').textContent = post.author.slice(1, 3).toUpperCase();
+            document.getElementById('sim-reposted-by').textContent = post.reposted ? 'You reposted this' : 'Not reposted by you';
+            document.getElementById('sim-feed-status').textContent = `Feed Status: Ready (Post ${simPostIndex + 1} of 80)`;
+        }
+
+        function toggleSim() {
+            simRunning = !simRunning;
+            const btn = document.getElementById('sim-toggle-btn');
+
+            if (simRunning) {
+                btn.textContent = 'Stop Auto-Unrepost';
+                btn.classList.remove('bg-white', 'text-black');
+                btn.classList.add('bg-brand-accent', 'text-white', 'sim-pulse-active');
+                logSim('Bot started on profile feed.', '#2ed573');
+                runSimLoop();
+            } else {
+                btn.textContent = 'Start Auto-Unrepost';
+                btn.classList.remove('bg-brand-accent', 'text-white', 'sim-pulse-active');
+                btn.classList.add('bg-white', 'text-black');
+                logSim('Bot stopped by user.', '#f5a623');
+                clearTimeout(simInterval);
+            }
+        }
+
+        function runSimLoop() {
+            if (!simRunning) return;
+            const currentPost = mockPosts[simPostIndex % mockPosts.length];
+
+            logSim(`Checking post ${currentPost.id}...`);
+
+            simInterval = setTimeout(() => {
+                if (!simRunning) return;
+
+                if (currentPost.reposted) {
+                    logSim(`Found reposted video. Clicking remove repost...`);
+                    setTimeout(() => {
+                        if (!simRunning) return;
+                        showSimToast();
+                        simCurrent++;
+                        simTotal++;
+                        document.getElementById('sim-stat-current').textContent = simCurrent;
+                        document.getElementById('sim-stat-total').textContent = simTotal.toLocaleString();
+                        logSim(`Successfully removed repost #${simTotal}!`, '#2ed573');
+                        currentPost.reposted = false;
+
+                        // Scroll Advance
+                        setTimeout(() => {
+                            if (!simRunning) return;
+                            logSim('Moving down to the next video...');
+                            simPostIndex++;
+                            renderMockPost();
+                            runSimLoop();
+                        }, 1200);
+                    }, 800);
+                } else {
+                    simSkipped++;
+                    document.getElementById('sim-stat-skipped').textContent = simSkipped;
+                    logSim(`Not reposted by you. Skipping to next post...`, '#a0a0a0');
+                    simPostIndex++;
+                    renderMockPost();
+                    setTimeout(runSimLoop, 1000);
+                }
+            }, 1200);
+        }
+
+        document.getElementById('sim-toggle-btn').addEventListener('click', toggleSim);
+        document.getElementById('sim-manual-next').addEventListener('click', () => {
+            simPostIndex++;
+            renderMockPost();
+            logSim('Moved to next post.');
+        });
+        document.getElementById('sim-unhide-btn').addEventListener('click', () => {
+            logSim('Unhid the Reposts tab.', '#2ed573');
+        });
+        document.getElementById('sim-btn-help').addEventListener('click', () => {
+            logSim('Tip: Keep this tab open while the bot runs.', '#00f2fe');
+        });
+
+        // FAQ Toggle Logic
+        function toggleFaq(btn) {
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('svg');
+            const isOpen = !content.classList.contains('hidden');
+
+            document.querySelectorAll('.faq-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.faq-trigger svg').forEach(el => el.classList.remove('rotate-180'));
+
+            if (!isOpen) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            }
+        }
+
+        // Initial setup
+        renderMockPost();
+    </script>
+</body>
+</html>
