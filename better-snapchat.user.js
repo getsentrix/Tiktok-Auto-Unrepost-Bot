@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Better Snapchat Web (Native iPhone 13 & Safari Mobile Experience)
 // @namespace    https://antigravity.google.com/
-// @version      6.0.0
-// @description  Pixel-perfect native phone layout for iPhone 13 Safari: full dvh responsive height, native iOS header with centered ghost, single-line inline chat status & streaks, edge-to-edge media in chat bubbles, centered stories, permanent bottom bar, and mobile blocker bypass.
+// @version      6.1.0
+// @description  Pixel-perfect native phone layout for iPhone 13 Safari: full dvh responsive height, native iOS header with centered ghost, single-line inline chat status & streaks, edge-to-edge media in chat bubbles, centered stories, permanent bottom bar, modal overlays (New Chat & Add Friends), and mobile redirect blocker bypass.
 // @author       Dylan & Antigravity
+// @match        https://*.snapchat.com/*
+// @match        https://snapchat.com/*
 // @match        https://web.snapchat.com/*
-// @match        https://www.snapchat.com/web*
+// @match        https://www.snapchat.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=snapchat.com
 // @grant        none
 // @run-at       document-start
@@ -15,7 +17,39 @@
   'use strict';
 
   /* ==========================================================================
-     1. Mobile Safari UA & Platform Shim (Bypasses "Snapchat for Web on computer" block)
+     0. Early Redirect Interception & Mobile Blocker Bypass
+     ========================================================================== */
+  (function handleEarlyRedirects() {
+    const loc = window.location;
+    // Intercept redirect to /download or root splash page on snapchat.com
+    if (loc.hostname === 'www.snapchat.com' || loc.hostname === 'snapchat.com' || loc.hostname === 'web.snapchat.com') {
+      if (loc.pathname.startsWith('/download') || loc.pathname === '/' || loc.pathname === '') {
+        loc.replace('https://www.snapchat.com/web');
+        return;
+      }
+    }
+
+    // Intercept client-side pushState / replaceState redirects targeting /download
+    try {
+      const origPush = history.pushState;
+      const origReplace = history.replaceState;
+      history.pushState = function(state, title, url) {
+        if (url && typeof url === 'string' && (url.includes('/download') || url === 'https://www.snapchat.com/')) {
+          return origReplace.apply(this, [state, title, '/web']);
+        }
+        return origPush.apply(this, arguments);
+      };
+      history.replaceState = function(state, title, url) {
+        if (url && typeof url === 'string' && (url.includes('/download') || url === 'https://www.snapchat.com/')) {
+          return origReplace.apply(this, [state, title, '/web']);
+        }
+        return origReplace.apply(this, arguments);
+      };
+    } catch (e) {}
+  })();
+
+  /* ==========================================================================
+     1. Mobile Safari UA & Platform Shim (Bypasses Snapchat's iPad/Mobile Detector)
      ========================================================================== */
   (function spoofDesktopOnMobile() {
     const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15';
@@ -23,11 +57,16 @@
       Object.defineProperty(navigator, 'userAgent', { get: () => DESKTOP_UA, configurable: true });
       Object.defineProperty(navigator, 'appVersion', { get: () => DESKTOP_UA, configurable: true });
       Object.defineProperty(navigator, 'platform', { get: () => 'MacIntel', configurable: true });
+      Object.defineProperty(navigator, 'vendor', { get: () => 'Apple Computer, Inc.', configurable: true });
+      // Crucial: Snapchat checks "MacIntel"===platform && maxTouchPoints > 2 to detect iPads/mobile and redirect to /download.
+      // Returning 1 preserves touch event capability while blocking the mobile redirect trigger!
+      Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 1, configurable: true });
+      Object.defineProperty(navigator, 'msMaxTouchPoints', { get: () => 0, configurable: true });
     } catch (e) {}
   })();
 
   /* ==========================================================================
-     2. Viewport Meta Configuration
+     2. Viewport Meta Configuration (Edge-to-Edge Safe Area & Zero Auto-Zoom)
      ========================================================================== */
   function injectMeta() {
     let meta = document.querySelector('meta[name="viewport"]');
@@ -59,7 +98,7 @@
     --sys-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
 
-  html, body, main#root {
+  html, body {
     height: 100vh !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
@@ -67,6 +106,9 @@
     margin: 0 !important;
     padding: 0 !important;
     overflow: hidden !important;
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+    position: fixed !important;
     background: #060609 !important;
     font-family: var(--sys-font) !important;
     -webkit-font-smoothing: antialiased !important;
@@ -74,7 +116,25 @@
     touch-action: manipulation !important;
   }
 
-  /* Global scrollbar suppression for pure native mobile app feel */
+  main#root {
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Prevent iOS Safari from auto-zooming on input focus (requires >= 16px font) */
+  input,
+  textarea,
+  [contenteditable="true"],
+  div[role="textbox"] {
+    font-size: 16px !important;
+  }
+
+  /* Global scrollbar suppression for native mobile feel */
   * {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
@@ -145,9 +205,83 @@
     }
   }
 
-  body[data-so-mode="chats"] main#root > div:first-child > div:nth-child(3),
-  body:not([data-so-mode]) main#root > div:first-child > div:nth-child(3) {
+  /* In Chats mode, hide main child 3 UNLESS it contains active modals (.LtQF8) */
+  body[data-so-mode="chats"] main#root > div:first-child > div:nth-child(3):not(:has(.LtQF8)),
+  body:not([data-so-mode]) main#root > div:first-child > div:nth-child(3):not(:has(.LtQF8)) {
     display: none !important;
+  }
+
+  /* --------------------------------------------------------------------------
+     MODALS OVERLAY (NEW CHAT & ADD FRIENDS FIX)
+     -------------------------------------------------------------------------- */
+  body[data-so-mode="chats"] main#root > div:first-child > div:nth-child(3):has(.LtQF8),
+  body:not([data-so-mode]) main#root > div:first-child > div:nth-child(3):has(.LtQF8),
+  body.so-has-modal main#root > div:first-child > div:nth-child(3) {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1000000 !important;
+    background: transparent !important;
+    pointer-events: auto !important;
+  }
+
+  /* Hide regular right pane contents when modal is open */
+  main#root > div:first-child > div:nth-child(3):has(.LtQF8) > div._XMCw > div:not(.LtQF8),
+  body.so-has-modal main#root > div:first-child > div:nth-child(3) > div._XMCw > div:not(.LtQF8) {
+    display: none !important;
+  }
+
+  /* Full Screen Backdrop for Modals */
+  div.LtQF8 {
+    display: flex !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1000001 !important;
+    background: rgba(0, 0, 0, 0.75) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    padding: 12px !important;
+    pointer-events: auto !important;
+  }
+
+  /* Modal Cards: New Chat (.sjdIo) and Add Friends (.zYgGl) */
+  div.LtQF8 > div,
+  div.sjdIo,
+  div.zYgGl {
+    width: 100% !important;
+    max-width: 420px !important;
+    height: auto !important;
+    max-height: 82dvh !important;
+    background: #14141a !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Modal inner scroll containers */
+  div.sjdIo form.c9yiB,
+  div.sjdIo form,
+  div.zYgGl > div {
+    width: 100% !important;
+    max-height: 82dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
   /* --------------------------------------------------------------------------
@@ -325,7 +459,7 @@
   main#root > div:first-child > div:nth-child(3) div[role="presentation"] > div:nth-child(2) > div:nth-child(2) {
     flex: 0 0 auto !important;
     min-height: 50px !important;
-    margin: 6px 12px max(12px, var(--safe-bottom)) 12px !important;
+    margin: 6px 12px max(10px, var(--safe-bottom)) 12px !important;
     padding: 4px 8px !important;
     background: rgba(22, 22, 28, 0.96) !important;
     backdrop-filter: blur(24px) !important;
@@ -369,7 +503,7 @@
     align-items: center !important;
   }
 
-  /* Text input itself */
+  /* Text input itself (16px to prevent iOS auto-zoom) */
   main#root > div:first-child > div:nth-child(3) div[role="presentation"] > div:nth-child(2) > div:nth-child(2) div[role="textbox"],
   div[role="textbox"][contenteditable="true"] {
     width: 100% !important;
@@ -377,7 +511,7 @@
     border: none !important;
     padding: 6px 36px 6px 6px !important;
     box-sizing: border-box !important;
-    font-size: 15px !important;
+    font-size: 16px !important;
     color: #f5f5f7 !important;
     outline: none !important;
     caret-color: var(--snap-yellow) !important;
@@ -626,7 +760,8 @@
     align-items: center !important;
   }
 
-  div.KcY9t button {
+  div.KcY9t button,
+  button.kwuI_ {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -646,7 +781,8 @@
     align-items: center !important;
   }
 
-  div.LsbRg button {
+  div.LsbRg button,
+  button.n6VkK {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -666,13 +802,15 @@
     width: 100% !important;
     box-sizing: border-box !important;
     padding: 6px 12px !important;
+    flex: 0 0 auto !important;
   }
 
   /* Navigation & Scroll Container */
   nav.deg2K,
   main#root > div:first-child > div:nth-child(2) > nav {
-    height: calc(100dvh - var(--header-height) - var(--safe-top) - 61px) !important;
-    max-height: calc(100dvh - var(--header-height) - var(--safe-top) - 61px) !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
     box-sizing: border-box !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
@@ -917,10 +1055,10 @@
   }
   `;
 
-  let styleEl = document.getElementById('snap-overhaul-v5');
+  let styleEl = document.getElementById('snap-overhaul-v6');
   if (!styleEl) {
     styleEl = document.createElement('style');
-    styleEl.id = 'snap-overhaul-v5';
+    styleEl.id = 'snap-overhaul-v6';
     (document.head || document.documentElement).appendChild(styleEl);
   }
   styleEl.textContent = OVERHAUL_CSS;
@@ -981,7 +1119,14 @@
       const closeBtn = document.querySelector('main#root > div:first-child > div:nth-child(3) button[aria-label="Close"], main#root > div:first-child > div:nth-child(3) button:has(svg path[d*="M19 6.41"]), main#root > div:first-child > div:nth-child(3) button:has(svg path[d*="M18 6L6 18"])');
       if (closeBtn) closeBtn.click();
 
-      // 5. Trigger resize event so virtual list repaints smoothly
+      // 5. Close any open modal
+      const modal = document.querySelector('.LtQF8');
+      if (modal) {
+        const modalClose = document.querySelector('button[title="New Chat"], button[title="View friend requests"], button.n6VkK, button.kwuI_');
+        if (modalClose) modalClose.click();
+      }
+
+      // 6. Trigger resize event so virtual list repaints smoothly
       setTimeout(() => {
         window.dispatchEvent(new UIEvent('resize'));
       }, 50);
@@ -1095,8 +1240,12 @@
      8. UI Synchronizer
      ========================================================================== */
   function syncUI() {
+    injectMeta();
     ensureBottomBar();
     ensureBackButton();
+
+    const hasModal = !!document.querySelector('.LtQF8');
+    document.body.classList.toggle('so-has-modal', hasModal);
 
     const hasActiveChat = !document.querySelector('div.S4e9r') && (
       (window.location.pathname.startsWith('/web/') && window.location.pathname !== '/web') ||
@@ -1121,7 +1270,7 @@
   }
 
   /* ==========================================================================
-     9. Event Listeners (Clicks, Story Chat, Escape, History)
+     9. Event Listeners (Clicks, Story Chat, Escape, History, Modals)
      ========================================================================== */
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') openChatsView();
@@ -1134,6 +1283,14 @@
   });
 
   document.addEventListener('click', (e) => {
+    // 0. Clicking outside modal card on modal backdrop -> dismiss modal
+    if (e.target && e.target.classList && e.target.classList.contains('LtQF8')) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      const modalClose = document.querySelector('button[title="New Chat"], button[title="View friend requests"], button.n6VkK, button.kwuI_');
+      if (modalClose) modalClose.click();
+      return;
+    }
+
     // 1. Top-left chat icon inside story view -> Exit story and return to Chats
     const storyChatBtn = e.target.closest('button.kTUE0, div.PXgWb button, button:has(svg path[d*="M18.875"])');
     if (storyChatBtn) {
